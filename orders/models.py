@@ -36,7 +36,7 @@ class Inspection(models.Model):
     done_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Inspection {self.inspection_id} - {self.vehicle.number_plate}"
+        return f"Inspection {self.inspection_id} {self.vehicle.number_plate}"
 
 
 class Order(models.Model):
@@ -55,7 +55,7 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Job {self.order_id} - {self.vehicle.number_plate}"
+        return f"Job {self.order_id} {self.vehicle.number_plate}"
 
     def service_total(self):
         total = 0

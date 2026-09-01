@@ -47,7 +47,7 @@ class EmployeeTests(TestCase):
             role='Senior Technician',
             description='Inspects cars and lists parts needed',
         )
-        self.assertEqual(str(role), 'James Oyera - Senior Technician')
+        self.assertEqual(str(role), 'James Oyera Senior Technician')
         self.assertEqual(employee.role_set.count(), 1)
 
     def test_dashboard_and_staff_pages_open(self):
@@ -55,6 +55,16 @@ class EmployeeTests(TestCase):
         self.assertEqual(self.client.get(reverse('employee_list')).status_code, 200)
         self.assertEqual(self.client.get(reverse('employee_add')).status_code, 200)
         self.assertEqual(self.client.get(reverse('role_add')).status_code, 200)
+
+    def test_navbar_shows_profile_and_logout(self):
+        page = self.client.get(reverse('home'))
+        self.assertContains(page, 'class="profile-chip"')
+        self.assertContains(page, 'class="logout-btn"')
+        self.assertContains(page, 'Logout')
+        self.assertContains(page, 'admin')
+        self.assertContains(page, 'Admin')
+        self.assertContains(page, 'employees/logo.png')
+        self.assertContains(page, 'employees/favicon-32.png')
 
     def test_another_job_role_can_be_added_from_the_form(self):
         employee = Employee.objects.create(
@@ -179,18 +189,30 @@ class EmployeeTests(TestCase):
 
 class AccessTests(TestCase):
     def test_login_page_is_visible(self):
-        response = self.client.get(reverse('login'))
+        response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Staff login')
+        self.assertContains(response, 'auth-slider')
+        self.assertContains(response, 'auth-overlay')
+        self.assertNotContains(response, 'carousel-indicators')
+        self.assertContains(response, 'employees/auth/nairobi-garage.jpg')
+        self.assertContains(response, 'Developed by Shatrah Ddamulira')
         self.assertContains(response, 'data-username="admin"')
         self.assertContains(response, 'data-username="james"')
         self.assertContains(response, 'data-username="mary"')
+        self.assertContains(response, 'employees/favicon-32.png')
         self.assertNotContains(response, 'Customers')
 
-    def test_home_requires_login(self):
-        response = self.client.get(reverse('home'))
+    def test_old_login_url_opens_root(self):
+        response = self.client.get(reverse('login'))
         self.assertEqual(response.status_code, 302)
-        self.assertIn('/login/', response.url)
+        self.assertEqual(response.url, '/')
+
+    def test_home_requires_login(self):
+        response = self.client.get(reverse('employee_list'))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.startswith('/?next='))
+        self.assertNotIn('/login/', response.url)
 
     def test_technician_cannot_open_staff_payments_or_services(self):
         user = User.objects.create_user('mary', password='tech-pass-123')
@@ -265,3 +287,23 @@ class AccessTests(TestCase):
         self.assertEqual(self.client.get(reverse('service_add')).status_code, 302)
         self.assertEqual(self.client.get(reverse('part_add')).status_code, 302)
         self.assertEqual(self.client.get(reverse('employee_list')).status_code, 302)
+
+
+class DeploySettingsTests(TestCase):
+    def test_static_files_use_an_absolute_url(self):
+        from django.conf import settings
+        self.assertTrue(settings.STATIC_URL.startswith('/'))
+        self.assertTrue(str(settings.STATIC_ROOT).endswith('staticfiles'))
+
+    def test_postgres_url_is_parsed_for_vercel(self):
+        from oas.settings import postgres_from_url
+        config = postgres_from_url(
+            'postgres://bay:p%40ss@db.example.com:5432/oasbay?sslmode=require'
+        )
+        self.assertEqual(config['ENGINE'], 'django.db.backends.postgresql')
+        self.assertEqual(config['NAME'], 'oasbay')
+        self.assertEqual(config['USER'], 'bay')
+        self.assertEqual(config['PASSWORD'], 'p@ss')
+        self.assertEqual(config['HOST'], 'db.example.com')
+        self.assertEqual(config['PORT'], '5432')
+        self.assertEqual(config['OPTIONS']['sslmode'], 'require')

@@ -35,4 +35,4 @@ class Role(models.Model):
     description = models.TextField(blank=True)
 
     def __str__(self):
-        return f"{self.employee.employee_name} - {self.role}"
+        return f"{self.employee.employee_name} {self.role}"

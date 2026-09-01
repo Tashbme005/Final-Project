@@ -25,7 +25,7 @@ def payment_add(request):
             payment = form.save()
             Receipt.objects.create(
                 payment=payment,
-                receipt_number=f'OAS-{payment.payment_id:04d}',
+                receipt_number=f'OAS{payment.payment_id:04d}',
             )
             payment.order.status = 'Completed'
             payment.order.save()

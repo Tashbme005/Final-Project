@@ -1,6 +1,5 @@
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
 from .access import role_required, ADMIN, SENIOR, TECHNICIAN, user_role
@@ -12,8 +11,15 @@ from services.models import Service
 from payments.models import Payment
 
 
-def login_view(request):
+def _login_next(request):
+    return request.POST.get('next') or request.GET.get('next') or ''
+
+
+def render_login(request):
     if request.user.is_authenticated:
+        next_url = _login_next(request)
+        if next_url.startswith('/'):
+            return redirect(next_url)
         return redirect('home')
     if request.method == 'POST':
         username = (request.POST.get('username') or '').strip()
@@ -26,23 +32,31 @@ def login_view(request):
                 user = authenticate(request, username=match.username, password=password)
         if user is not None:
             login(request, user)
-            next_url = request.POST.get('next') or request.GET.get('next')
-            if next_url and next_url.startswith('/'):
+            next_url = _login_next(request)
+            if next_url.startswith('/'):
                 return redirect(next_url)
             return redirect('home')
         messages.error(request, 'Invalid username or password.')
-    return render(request, 'employees/login.html', {'next': request.GET.get('next', '')})
+    return render(request, 'employees/login.html', {'next': _login_next(request)})
+
+
+def login_view(request):
+    if request.method != 'POST':
+        query = request.GET.urlencode()
+        return redirect(f'/{("?" + query) if query else ""}')
+    return render_login(request)
 
 
 @require_POST
 def logout_view(request):
     logout(request)
     messages.success(request, 'You have been logged out.')
-    return redirect('login')
+    return redirect('home')
 
 
-@login_required
 def home(request):
+    if not request.user.is_authenticated:
+        return render_login(request)
     role = user_role(request.user)
     employee = getattr(request.user, 'employee', None)
     orders = Order.objects.all()

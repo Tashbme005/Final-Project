@@ -1,0 +1,16 @@
+[project]
+name = "oas-bay"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "Django==5.2.9",
+    "asgiref==3.12.1",
+    "psycopg[binary]==3.2.9",
+    "sqlparse==0.6.0",
+]
+
+[tool.vercel]
+entrypoint = "oas.wsgi:application"
+
+[tool.vercel.scripts]
+build = 'if [ -n "$DATABASE_URL" ]; then python manage.py migrate --noinput && python manage.py seed_data; fi'

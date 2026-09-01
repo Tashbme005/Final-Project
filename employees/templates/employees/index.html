@@ -16,21 +16,21 @@
     <div class="col-md-3">
         {% if can_manage_staff %}
         <a class="stat-link" href="{% url 'employee_list' %}">
-            <div class="stat" style="background:#1c1917;">
-                <small>Staff / Technicians</small>
+            <div class="stat stat-ink">
+                <small>Staff and technicians</small>
                 <h3>{{ technician_count }}</h3>
             </div>
         </a>
         {% else %}
-        <div class="stat" style="background:#1c1917;">
-            <small>Staff / Technicians</small>
+        <div class="stat stat-ink">
+            <small>Staff and technicians</small>
             <h3>{{ technician_count }}</h3>
         </div>
         {% endif %}
     </div>
     <div class="col-md-3">
         <a class="stat-link" href="{% if can_manage_customers %}{% url 'customer_list' %}{% else %}{% url 'order_list' %}{% endif %}">
-            <div class="stat" style="background:#c45c12;">
+            <div class="stat stat-blue">
                 <small>Customers</small>
                 <h3>{{ customer_count }}</h3>
             </div>
@@ -38,7 +38,7 @@
     </div>
     <div class="col-md-3">
         <a class="stat-link" href="{% if can_manage_customers %}{% url 'vehicle_list' %}{% else %}{% url 'order_list' %}{% endif %}">
-            <div class="stat" style="background:#2563eb;">
+            <div class="stat stat-slate">
                 <small>Cars in records</small>
                 <h3>{{ vehicle_count }}</h3>
             </div>
@@ -46,7 +46,7 @@
     </div>
     <div class="col-md-3">
         <a class="stat-link" href="{% url 'order_list' %}">
-            <div class="stat" style="background:#16a34a;">
+            <div class="stat stat-mist">
                 <small>Job cards</small>
                 <h3>{{ order_count }}</h3>
             </div>

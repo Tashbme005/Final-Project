@@ -51,7 +51,7 @@
                 <div class="mb-3">
                     <label class="form-label" for="id_job_role">Job role <span class="text-danger">*</span></label>
                     {{ form.job_role }}
-                    <div class="form-text">This sets login access. You can add another work title from Staff → Add job role.</div>
+                    <div class="form-text">This sets login access. You can add another work title from Staff, then Add job role.</div>
                     <div class="live-error text-danger small mt-1">
                         {% for error in form.job_role.errors %}{{ error }}{% endfor %}
                     </div>

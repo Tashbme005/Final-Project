@@ -1,11 +1,35 @@
 import os
+import urllib.parse
 from pathlib import Path
 
+from django.contrib.messages import constants as message_constants
 from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+ON_VERCEL = os.environ.get('VERCEL') == '1'
 
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('1', 'true', 'yes')
+
+def env_flag(name, default=False):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.lower() in ('1', 'true', 'yes')
+
+
+def csv_env(name, default=''):
+    return [
+        item.strip()
+        for item in os.environ.get(name, default).split(',')
+        if item.strip()
+    ]
+
+
+def host_from_url(value):
+    value = (value or '').strip()
+    return value.replace('https://', '').replace('http://', '').split('/')[0]
+
+
+DEBUG = env_flag('DJANGO_DEBUG', default=not ON_VERCEL)
 
 SECRET_KEY = os.environ.get(
     'DJANGO_SECRET_KEY',
@@ -14,13 +38,19 @@ SECRET_KEY = os.environ.get(
 if not SECRET_KEY:
     raise ImproperlyConfigured('Set DJANGO_SECRET_KEY when DEBUG is False.')
 
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.environ.get('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
-    if host.strip()
-]
+ALLOWED_HOSTS = csv_env('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost')
+for extra in ('.vercel.app', os.environ.get('VERCEL_URL'), os.environ.get('VERCEL_PROJECT_PRODUCTION_URL')):
+    host = host_from_url(extra)
+    if host and host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(host)
 if DEBUG and 'testserver' not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append('testserver')
+
+CSRF_TRUSTED_ORIGINS = csv_env('DJANGO_CSRF_TRUSTED_ORIGINS')
+for extra in ('https://*.vercel.app', os.environ.get('VERCEL_URL'), os.environ.get('VERCEL_PROJECT_PRODUCTION_URL')):
+    origin = extra if str(extra).startswith('https://') else (f'https://{host_from_url(extra)}' if extra else '')
+    if origin and origin not in CSRF_TRUSTED_ORIGINS and origin != 'https://':
+        CSRF_TRUSTED_ORIGINS.append(origin)
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -66,12 +96,32 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'oas.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+
+def postgres_from_url(database_url):
+    url = urllib.parse.urlparse(database_url)
+    query = urllib.parse.parse_qs(url.query)
+    sslmode = (query.get('sslmode') or ['require'])[0]
+    return {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': urllib.parse.unquote(url.path.lstrip('/')),
+        'USER': urllib.parse.unquote(url.username or ''),
+        'PASSWORD': urllib.parse.unquote(url.password or ''),
+        'HOST': url.hostname,
+        'PORT': str(url.port or '5432'),
+        'CONN_MAX_AGE': 0,
+        'OPTIONS': {'sslmode': sslmode},
     }
-}
+
+
+if os.environ.get('DATABASE_URL'):
+    DATABASES = {'default': postgres_from_url(os.environ['DATABASE_URL'])}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -85,18 +135,28 @@ TIME_ZONE = 'Africa/Kampala'
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGIN_URL = 'login'
+MESSAGE_TAGS = {
+    message_constants.DEBUG: 'secondary',
+    message_constants.INFO: 'info',
+    message_constants.SUCCESS: 'success',
+    message_constants.WARNING: 'warning',
+    message_constants.ERROR: 'danger',
+}
+
+LOGIN_URL = 'home'
 LOGIN_REDIRECT_URL = 'home'
-LOGOUT_REDIRECT_URL = 'login'
+LOGOUT_REDIRECT_URL = 'home'
 
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 SECURE_REFERRER_POLICY = 'same-origin'
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 if not DEBUG:
     SESSION_COOKIE_SECURE = True

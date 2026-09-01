@@ -14,7 +14,7 @@
     </div>
 </div>
 {% if not issued_only %}
-<p class="text-muted">Engine oils UGX 79,000–200,000. Brake fluids UGX 13,000–20,000. Oil filters UGX 15,000–20,000.</p>
+<p class="text-muted">Engine oils UGX 79,000 to 200,000. Brake fluids UGX 13,000 to 20,000. Oil filters UGX 15,000 to 20,000.</p>
 <div class="page-card p-3 mb-4">
     <table class="table mb-0">
         <thead>
@@ -71,7 +71,7 @@
                 <td>{{ item.part.part_name }}</td>
                 <td>{{ item.quantity }}</td>
                 <td>{{ item.requested_by.employee_name }}</td>
-                {% if not issued_only %}<td>{{ item.issued_to.employee_name|default:"-" }}</td>{% endif %}
+                {% if not issued_only %}<td>{{ item.issued_to.employee_name|default:"None" }}</td>{% endif %}
                 <td>{{ item.status }}</td>
             </tr>
             {% empty %}

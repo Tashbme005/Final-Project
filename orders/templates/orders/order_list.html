@@ -37,12 +37,12 @@
                 <td>
                     {% for service in order.service.all %}
                         <span class="badge bg-secondary">{{ service.service_name }}</span>
-                    {% empty %}-{% endfor %}
+                    {% empty %}None{% endfor %}
                 </td>
                 <td>
                     {% for tech in order.technicians.all %}
                         {{ tech.employee_name }}{% if not forloop.last %}, {% endif %}
-                    {% empty %}-{% endfor %}
+                    {% empty %}None{% endfor %}
                 </td>
                 <td>{{ order.service_total }}</td>
                 <td>{{ order.status }}</td>

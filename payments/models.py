@@ -20,7 +20,7 @@ class Payment(models.Model):
     comment = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f"Payment {self.payment_id} - {self.payment_status}"
+        return f"Payment {self.payment_id} {self.payment_status}"
 
 
 class Receipt(models.Model):
