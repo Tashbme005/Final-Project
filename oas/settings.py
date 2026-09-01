@@ -31,12 +31,12 @@ def host_from_url(value):
 
 DEBUG = env_flag('DJANGO_DEBUG', default=not ON_VERCEL)
 
-SECRET_KEY = os.environ.get(
-    'DJANGO_SECRET_KEY',
-    'django-insecure-dev-only-change-me' if DEBUG else '',
-)
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 if not SECRET_KEY:
-    raise ImproperlyConfigured('Set DJANGO_SECRET_KEY when DEBUG is False.')
+    if DEBUG or ON_VERCEL:
+        SECRET_KEY = 'django-insecure-dev-only-change-me'
+    else:
+        raise ImproperlyConfigured('Set DJANGO_SECRET_KEY when DEBUG is False.')
 
 ALLOWED_HOSTS = csv_env('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost')
 for extra in ('.vercel.app', os.environ.get('VERCEL_URL'), os.environ.get('VERCEL_PROJECT_PRODUCTION_URL')):
