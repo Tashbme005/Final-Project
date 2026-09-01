@@ -75,9 +75,9 @@ python manage.py runserver 8001
 
 ## Deploy on Vercel
 
-SQLite will not keep data on Vercel. Add a Postgres database (Vercel Storage, Neon, or Supabase) and set these environment variables in the Vercel project:
+SQLite will not keep data on Vercel. Add a Postgres database (Vercel Storage, Neon, or Supabase). In the Vercel project open **Settings**, then **Environment Variables**, and add them for Production, Preview, and Development:
 
-* `DJANGO_SECRET_KEY`: a long random string
+* `DJANGO_SECRET_KEY`: a long random string. Create one with `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"`
 * `DJANGO_DEBUG`: `False`
 * `DJANGO_ALLOWED_HOSTS`: `.vercel.app`
 * `DATABASE_URL`: set automatically if you attach Vercel Postgres
@@ -87,7 +87,7 @@ Then:
 1. Push this repo to GitHub.
 2. Import the project at [vercel.com/new](https://vercel.com/new).
 3. Add a Postgres store and the variables above.
-4. Deploy.
+4. Deploy. If a build already failed, save `DJANGO_SECRET_KEY` and click Redeploy.
 
 The first deploy runs migrations and `seed_data`, so the demo logins work on the live site. Open the Vercel URL (the login page is `/`).
 
