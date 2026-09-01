@@ -1,98 +1,132 @@
 from django import forms
+from oas.validators import clean_email_address, clean_full_name, clean_nin, clean_text, clean_ug_phone
 from .models import Employee, Role
 
-class MyForm(forms.Form):
-    template_name = "form_snippet.html"
 
 class EmployeeForm(forms.ModelForm):
+    use_required_attribute = False
+
+    id_kind = forms.ChoiceField(
+        label='Do you have a NIN?',
+        choices=[
+            ('yes', 'Yes, I have a NIN (Ugandan)'),
+            ('no', "No, I don't have a NIN (foreigner)"),
+        ],
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        initial='yes',
+        error_messages={'required': 'Select whether this person has a NIN.'},
+    )
+
     class Meta:
         model = Employee
-        fields = "__all__"
+        fields = ['employee_name', 'date_of_birth', 'phone_number', 'email', 'job_role', 'nin', 'passport_number']
+        error_messages = {
+            'employee_name': {'required': 'Enter the staff member full name.'},
+            'date_of_birth': {'required': 'Enter the date of birth.'},
+            'phone_number': {'required': 'Enter a phone number.'},
+            'email': {'required': 'Enter an email address.', 'invalid': 'Enter a valid email address.'},
+        }
         widgets = {
-            "date_of_birth": forms.DateInput(attrs={"type": "date"})
+            'date_of_birth': forms.DateInput(attrs={'type': 'date', 'class': 'form-control', 'id': 'id_date_of_birth'}),
+            'employee_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'First name and last name',
+                'autocomplete': 'name',
+            }),
+            'phone_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '0772123456',
+                'maxlength': '10',
+                'inputmode': 'numeric',
+            }),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'job_role': forms.Select(attrs={'class': 'form-select'}),
+            'nin': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g. CM840312001ABC',
+                'maxlength': '20',
+            }),
+            'passport_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Passport number',
+                'maxlength': '20',
+            }),
         }
 
-        labels = {
-            "employee_name": "Name",
-            "date_of_birth": "DOB",
-            "phone_number": "Phone Number",
-            "email": "Email",
-            "nin": "NIN",
-            "passport_number": "Passport Number"
-        }
-
-    error_messages = {
-        "name": {
-            "required": "Full official name required"
-        },
-        "date_of_birth": {
-            "required": "Provide your date of birth as written on your birth certificate"
-        },
-        "phone_number": {
-            "required": "Provide currently available number"
-        },
-        "email": {
-            "required": "Provide email in your official names"
-        },
-        "nin": {
-            "required": "Provide your national identification number"
-        },
-        "passport": {
-            "required": "Provide your passport number in case your not Ugandan"
-        }
-    }
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields['id_kind'].initial = 'yes' if self.instance.has_nin else 'no'
+        self.order_fields([
+            'employee_name',
+            'date_of_birth',
+            'phone_number',
+            'email',
+            'job_role',
+            'id_kind',
+            'nin',
+            'passport_number',
+        ])
 
     def clean_employee_name(self):
-        employee_name = self.cleaned_data["employee_name"].strip()
+        return clean_full_name(self.cleaned_data.get('employee_name'), 'Staff name')
 
-        if len(employee_name.split()) < 2:
-            raise forms.ValidationError("Enter your first name, last name and any additional names")
-
-        return employee_name
+    def clean_phone_number(self):
+        return clean_ug_phone(self.cleaned_data.get('phone_number'))
 
     def clean_email(self):
-        email = self.cleaned_data["email"].lower() #lower ignores capital letters
-        employee_name = self.cleaned_data["employee_name"].lower()
+        return clean_email_address(self.cleaned_data.get('email'))
 
-        name = employee_name.split()#splits separate the employee name into separate names
-        email_name = email.split("@")[0].replace("."," ").replace("-", " ").replace("_", " ")#split(@)[0] picks out whats before the @, replace()handles names with the stated puntuation signs in them
-        email_names = email_name.split()
+    def clean_nin(self):
+        if self.data.get('id_kind') == 'no':
+            return ''
+        return clean_nin(self.cleaned_data.get('nin'))
 
-        if len(set(name) & set(email_names)) < 2:
-            raise forms.ValidationError("Provide email with at least two of your stated names")
+    def clean_passport_number(self):
+        if self.data.get('id_kind') != 'no':
+            return ''
+        return clean_text(self.cleaned_data.get('passport_number'), 'Passport number', min_length=6, max_length=50)
 
-        return email
+    def save(self, commit=True):
+        employee = super().save(commit=False)
+        employee.has_nin = self.cleaned_data.get('id_kind') == 'yes'
+        if employee.has_nin:
+            employee.passport_number = ''
+        else:
+            employee.nin = ''
+        if commit:
+            employee.save()
+        return employee
 
-    
+
 class RoleForm(forms.ModelForm):
+    use_required_attribute = False
+
     class Meta:
         model = Role
-        fields = "__all__"
-
+        fields = ['employee', 'role', 'description']
         labels = {
-            "employee": "Employee",
-            "role": "Role",
-            "description": "Description"
+            'employee': 'Staff member',
+            'role': 'Job role title',
+            'description': 'What they do',
         }
-
+        help_texts = {
+            'role': 'For example Alignment specialist, Stores clerk, or Cashier.',
+            'description': 'Optional short note about this role at the bay.',
+        }
         error_messages = {
-            "employee": {
-                "required": "Select employee from the list"
-            },
-            "role": {
-                "required": "Provide role of the employee"
-            },
-            "description": {
-                "required": "Provide a brief description of the role"
-            }
+            'employee': {'required': 'Select the staff member for this job role.'},
+            'role': {'required': 'Enter the job role title.'},
+        }
+        widgets = {
+            'employee': forms.Select(attrs={'class': 'form-select'}),
+            'role': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Alignment specialist'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 
     def clean_role(self):
-        role = self.cleaned_data["role"].strip()
+        return clean_text(self.cleaned_data.get('role'), 'Job role', min_length=3, max_length=40)
 
-        if len(role.split()) < 1:
-            raise forms.ValidationError("Provide a valid role")
+    def clean_description(self):
+        return (self.cleaned_data.get('description') or '').strip()
 
-        return role
-
-        

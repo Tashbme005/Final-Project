@@ -1,71 +1,60 @@
+from decimal import Decimal
 from django import forms
-from .models import Part
-
-class MyForm(forms.Form):
-    template_name = "form_snippet.html"
+from oas.validators import clean_text
+from .models import Part, PartsRequest
 
 
 class PartForm(forms.ModelForm):
+    use_required_attribute = False
+
     class Meta:
         model = Part
-        fields = "__all__"
-
-        labels = {
-            "part_name": "Part Name",
-            "quantity_in_stock": "Available Stock",
-            "unit_price": "Unit Price"
+        fields = ['part_name', 'quantity_in_stock', 'unit_price']
+        error_messages = {
+            'part_name': {'required': 'Enter the part name.'},
+            'quantity_in_stock': {'required': 'Enter the quantity in stock.', 'invalid': 'Enter a whole number.'},
+            'unit_price': {'required': 'Enter the unit price in UGX.', 'invalid': 'Enter a valid amount.'},
+        }
+        widgets = {
+            'part_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'quantity_in_stock': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '1'}),
         }
 
-        error = {
-            "part_name": {
-                "required": "Use the drop down options provided"
-            },
-            "quatity_in_stock": {
-                "required": "Available in stock"
-            },
-            "unit_price": {
-                "required": "Prices are based on size"
-            },
-        }
+    def clean_part_name(self):
+        return clean_text(self.cleaned_data.get('part_name'), 'Part name', min_length=2, max_length=100)
 
-    def clean_quantity_in_stock(self):
-        quantity_in_stock = self.cleaned_data["quantity_in_stock"]
-
-        if len(quantity_in_stock) < 5:
-            raise forms.ValidationError("Limited stock")
-
-        return quantity_in_stock
+    def clean_unit_price(self):
+        price = self.cleaned_data.get('unit_price')
+        if price is None or price <= Decimal('0'):
+            raise forms.ValidationError('Unit price must be greater than 0.')
+        return price
 
 
 class PartsRequestForm(forms.ModelForm):
+    use_required_attribute = False
+
     class Meta:
-        model = Part
-        fields = "__all__"
-
+        model = PartsRequest
+        fields = ['part', 'quantity', 'comment', 'requested_by', 'issued_to']
         labels = {
-            "part_request": "Part Request",
-            "quantity": "Quantity",
-            "comment": "Comment"
+            'issued_to': 'Issue to technician',
         }
-
-        error = {
-            "part_request": {
-                "required": "Use the drop down options provided"
-            },
-            "quantity": {
-                "required": "Available in stock"
-            },
-            "comment": {
-                "required": "Prices are based on size"
-            },
+        error_messages = {
+            'part': {'required': 'Select a part.'},
+            'quantity': {'required': 'Enter the quantity needed.'},
+            'requested_by': {'required': 'Select who is requesting the part.'},
+        }
+        widgets = {
+            'part': forms.Select(attrs={'class': 'form-select'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
+            'comment': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'requested_by': forms.Select(attrs={'class': 'form-select'}),
+            'issued_to': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def clean_quantity(self):
-        quantity = self.cleaned_data["quantity"]
-
-        if len(quantity) < 5:
-            raise forms.ValidationError("Limited stock")
-
+        quantity = self.cleaned_data.get('quantity')
+        if quantity is None or quantity < 1:
+            raise forms.ValidationError('Quantity must be at least 1.')
         return quantity
-
-    

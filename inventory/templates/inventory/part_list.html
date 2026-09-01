@@ -1,46 +1,83 @@
-{% extends 'base.html' %}
-
-{% block title %}Part List{% endblock %}
-
-{% load humanize %}
+{% extends "base.html" %}
+{% block title %}{% if issued_only %}Issued parts{% else %}Parts{% endif %}{% endblock %}
 
 {% block content %}
-    <div class="card">
-        <div class="card-header">
-            <h1>Part List</h1>
-            <p class="card-description">
-                Below is a list of all parts currently available in the inventory.
-            </p>
-        </div>
-        <div class="card-body">
-            {% if parts %}
-                <table class="part-table">
-                    <thead>
-                        <tr>
-                            <th>Part Name</th>
-                            <th>Description</th>
-                            <th>Quantity</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for part in parts %}
-                            <tr>
-                                <td>{{ part.name }}</td>
-                                <td>{{ part.description }}</td>
-                                <td>{{ part.quantity }}</td>
-                                <td>
-                                    <a href="{% url 'view_part' part.id %}" class="btn-view">View</a>
-                                    <a href="{% url 'update_part' part.id %}" class="btn-edit">Edit</a>
-                                    <a href="{% url 'delete_part' part.id %}" class="btn-delete">Delete</a>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-                <p>No parts available in the inventory.</p>
-            {% endif %}
-        </div>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">{% if issued_only %}Parts issued to me{% else %}Parts and oils on sale{% endif %}</h1>
+    <div>
+        {% if can_request_parts %}
+        <a href="{% url 'part_request_add' %}" class="btn btn-outline-dark">Request parts</a>
+        {% endif %}
+        {% if can_manage_parts %}
+        <a href="{% url 'part_add' %}" class="btn btn-bay">Add part</a>
+        {% endif %}
     </div>
+</div>
+{% if not issued_only %}
+<p class="text-muted">Engine oils UGX 79,000–200,000. Brake fluids UGX 13,000–20,000. Oil filters UGX 15,000–20,000.</p>
+<div class="page-card p-3 mb-4">
+    <table class="table mb-0">
+        <thead>
+            <tr>
+                <th>Part</th>
+                <th>Stock</th>
+                <th>Unit price (UGX)</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for part in parts %}
+            <tr>
+                <td>{{ part.part_name }}</td>
+                <td>{{ part.quantity_in_stock }}</td>
+                <td>{{ part.unit_price }}</td>
+                <td>
+                    {% if can_manage_parts %}
+                    <a href="{% url 'part_edit' part.part_id %}">Edit</a>
+                    {% include 'includes/delete_button.html' with delete_url='part_delete' pk=part.part_id %}
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4">
+                    No parts in stock.
+                    {% if can_manage_parts %}
+                    <a href="{% url 'part_add' %}">Add a part</a>.
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<h5>{% if issued_only %}Issued for my jobs{% else %}Recent parts requests{% endif %}</h5>
+<div class="page-card p-3">
+    <table class="table mb-0">
+        <thead>
+            <tr>
+                <th>Part</th>
+                <th>Qty</th>
+                <th>Requested by</th>
+                {% if not issued_only %}<th>Issued to</th>{% endif %}
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in requests %}
+            <tr>
+                <td>{{ item.part.part_name }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.requested_by.employee_name }}</td>
+                {% if not issued_only %}<td>{{ item.issued_to.employee_name|default:"-" }}</td>{% endif %}
+                <td>{{ item.status }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">{% if issued_only %}No parts have been issued to you yet.{% else %}No requests yet.{% endif %}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

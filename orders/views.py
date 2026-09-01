@@ -1,189 +1,145 @@
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from .models import Order
+from django.contrib import messages
+from django.shortcuts import render, redirect, get_object_or_404
+from django.views.decorators.http import require_POST
+from employees.access import role_required, ADMIN, SENIOR, TECHNICIAN, user_role
+from payments.models import Payment
+from .models import Customer, Vehicle, Inspection, Order
+from .forms import CustomerForm, VehicleForm, InspectionForm, OrderForm
 
-# Create your views here.
-@login_required
-def ordersPage(request):
-    orders = Order.objects.all()
-    return render(request, "orders/orders.html", {"orders": orders})
 
-@login_required
-def create_order(request):
+def _form_initial(request, *fields):
+    initial = {}
+    for field in fields:
+        value = request.GET.get(field)
+        if value:
+            initial[field] = value
+    return initial
+
+
+@role_required(ADMIN, SENIOR)
+def customer_list(request):
+    customers = Customer.objects.all()
+    return render(request, 'orders/customer_list.html', {'customers': customers})
+
+
+@role_required(ADMIN, SENIOR)
+def customer_add(request):
     if request.method == 'POST':
-        order_name = request.POST.get('order_name')
-        order_date = request.POST.get('order_date')
-        order_status = request.POST.get('order_status')
+        form = CustomerForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Customer saved. You can add their vehicle next.')
+            return redirect('customer_list')
+    else:
+        form = CustomerForm()
+    return render(request, 'orders/simple_form.html', {
+        'form': form,
+        'title': 'Register Customer',
+        'cancel_url': 'customer_list',
+    })
 
-        new_order = Order(
-            order_name=order_name,
-            order_date=order_date,
-            order_status=order_status
-        )
-        new_order.save()
-        return redirect('ordersPage')
-    return render(request, 'orders/order_form.html')
+
+@role_required(ADMIN, SENIOR)
+def vehicle_list(request):
+    vehicles = Vehicle.objects.select_related('customer').all()
+    return render(request, 'orders/vehicle_list.html', {'vehicles': vehicles})
 
 
-@login_required
-def order_details(request, order_id):
-    order = Order.objects.get(pk=order_id)
-    return render(request, 'orders/view_order.html', {'order': order})
-
-@login_required
-def update_order(request, order_id):
-    order = Order.objects.get(pk=order_id)
+@role_required(ADMIN, SENIOR)
+def vehicle_add(request):
     if request.method == 'POST':
-        order_name = request.POST.get('order_name')
-        order_date = request.POST.get('order_date')
-        order_status = request.POST.get('order_status')
+        form = VehicleForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Vehicle saved. You can inspect it or open a job card next.')
+            return redirect('vehicle_list')
+    else:
+        form = VehicleForm(initial=_form_initial(request, 'customer'))
+    return render(request, 'orders/simple_form.html', {
+        'form': form,
+        'title': 'Register Vehicle',
+        'cancel_url': 'vehicle_list',
+    })
 
-        order.order_name = order_name
-        order.order_date = order_date
-        order.order_status = order_status
-        order.save()
-        return redirect('ordersPage')
-    return render(request, 'orders/order_form.html', {'order': order})
 
-@login_required
-def delete_order(request, order_id):
-    order = Order.objects.get(pk=order_id)
+@role_required(ADMIN, SENIOR)
+def inspection_list(request):
+    inspections = Inspection.objects.select_related('vehicle').order_by('-done_at')
+    return render(request, 'orders/inspection_list.html', {'inspections': inspections})
+
+
+@role_required(ADMIN, SENIOR)
+def inspection_add(request):
+    if request.method == 'POST':
+        form = InspectionForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Inspection saved. Request parts or open a job card next.')
+            return redirect('inspection_list')
+    else:
+        form = InspectionForm(initial=_form_initial(request, 'vehicle'))
+    return render(request, 'orders/simple_form.html', {
+        'form': form,
+        'title': 'Senior Technician Inspection',
+        'note': 'The senior technician records the parts and oils this car needs.',
+        'cancel_url': 'inspection_list',
+    })
+
+
+@role_required(ADMIN, SENIOR, TECHNICIAN)
+def order_list(request):
+    orders = Order.objects.select_related('vehicle', 'vehicle__customer').prefetch_related('service', 'technicians').order_by('-created_at')
+    employee = getattr(request.user, 'employee', None)
+    if user_role(request.user) == TECHNICIAN and employee:
+        orders = orders.filter(technicians=employee)
+    status_filter = request.GET.get('status')
+    allowed = {choice[0] for choice in Order.STATUS_CHOICES}
+    if status_filter in allowed:
+        orders = orders.filter(status=status_filter)
+    else:
+        status_filter = ''
+    return render(request, 'orders/order_list.html', {
+        'orders': orders,
+        'status_filter': status_filter,
+    })
+
+
+@role_required(ADMIN, SENIOR)
+def order_add(request):
+    if request.method == 'POST':
+        form = OrderForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Job card saved.')
+            return redirect('order_list')
+    else:
+        form = OrderForm(initial=_form_initial(request, 'vehicle'))
+    return render(request, 'orders/simple_form.html', {
+        'form': form,
+        'title': 'New Job Card',
+        'note': 'A car can have one or more services. One or more technicians can handle the job.',
+        'cancel_url': 'order_list',
+    })
+
+
+@role_required(ADMIN, SENIOR, TECHNICIAN)
+def order_detail(request, order_id):
+    orders = Order.objects.select_related('vehicle', 'vehicle__customer').prefetch_related('service', 'technicians')
+    employee = getattr(request.user, 'employee', None)
+    if user_role(request.user) == TECHNICIAN and employee:
+        orders = orders.filter(technicians=employee)
+    order = get_object_or_404(orders, pk=order_id)
+    payment = Payment.objects.filter(order=order).first()
+    return render(request, 'orders/order_detail.html', {
+        'order': order,
+        'payment': payment,
+    })
+
+
+@role_required(ADMIN, SENIOR)
+@require_POST
+def order_delete(request, order_id):
+    order = get_object_or_404(Order, pk=order_id)
     order.delete()
-    return redirect('ordersPage')
-
-@login_required
-def create_customer(request):
-    if request.method == 'POST':
-        customer_name = request.POST.get('customer_name')
-        customer_email = request.POST.get('customer_email')
-        customer_phone = request.POST.get('customer_phone')
-
-        new_customer = Customer(
-            customer_name=customer_name,
-            customer_email=customer_email,
-            customer_phone=customer_phone
-        )
-        new_customer.save()
-        return redirect('ordersPage')
-    return render(request, 'orders/customer_form.html')
-
-def create_vehicle(request):
-        if request.method == 'POST':
-            vehicle_make = request.POST.get('vehicle_make')
-            vehicle_model = request.POST.get('vehicle_model')
-            vehicle_year = request.POST.get('vehicle_year')
-
-            new_vehicle = Vehicle(
-                vehicle_make=vehicle_make,
-                vehicle_model=vehicle_model,
-                vehicle_year=vehicle_year
-            )
-            new_vehicle.save()
-            return redirect('ordersPage')
-        return render(request, 'orders/vehicle_form.html')
-
-def create_inspection(request):
-    if request.method == 'POST':
-        inspection_date = request.POST.get('inspection_date')
-        inspection_result = request.POST.get('inspection_result')
-
-        new_inspection = Inspection(
-            inspection_date=inspection_date,
-            inspection_result=inspection_result
-        )
-        new_inspection.save()
-        return redirect('ordersPage')
-    return render(request, 'orders/inspection_form.html')
-
-def add_order(request):
-    if request.method == 'POST':
-        payload = request.POST
-        form = OrderForm(payload)
-        if form.is_valid():
-            form.save()
-            return redirect('ordersPage')
-    return render(request, 'orders/order_form.html', {'form': OrderForm()})
-
-def add_customer(request):
-    if request.method == 'POST':
-        payload = request.POST
-        form = CustomerForm(payload)
-        if form.is_valid():
-            form.save()
-            return redirect('ordersPage')
-    return render(request, 'orders/customer_form.html', {'form': CustomerForm()})
-
-def add_vehicle(request):
-    if request.method == 'POST':
-        payload = request.POST
-        form = VehicleForm(payload)
-        if form.is_valid():
-            form.save()
-            return redirect('ordersPage')
-    return render(request, 'orders/vehicle_form.html', {'form': VehicleForm()})
-
-def add_inspection(request):
-    if request.method == 'POST':
-        payload = request.POST
-        form = InspectionForm(payload)
-        if form.is_valid():
-            form.save()
-            return redirect('ordersPage')
-    return render(request, 'orders/inspection_form.html', {'form': InspectionForm()})
-
-def customer_details(request, customer_id):
-    customer = Customer.objects.get(id=customer_id)
-    return render(request, 'orders/customer_details.html', {'customer': customer})
-
-def vehicle_details(request, vehicle_id):
-    vehicle = Vehicle.objects.get(id=vehicle_id)
-    return render(request, 'orders/vehicle_details.html', {'vehicle': vehicle}) 
-
-def inspection_details(request, inspection_id):
-    inspection = Inspection.objects.get(id=inspection_id)
-    return render(request, 'orders/inspection_details.html', {'inspection': inspection})
-
-def update_customer(request, customer_id):
-    customer = Customer.objects.get(id=customer_id)
-    if request.method == 'POST':
-        customer.customer_name = request.POST.get('customer_name')
-        customer.customer_email = request.POST.get('customer_email')
-        customer.customer_phone = request.POST.get('customer_phone')
-        customer.save()
-        return redirect('ordersPage')
-    return render(request, 'orders/customer_form.html', {'customer': customer})
-
-def update_vehicle(request, vehicle_id):
-    vehicle = Vehicle.objects.get(id=vehicle_id)
-    if request.method == 'POST':
-        vehicle.vehicle_make = request.POST.get('vehicle_make')
-        vehicle.vehicle_model = request.POST.get('vehicle_model')
-        vehicle.vehicle_year = request.POST.get('vehicle_year')
-        vehicle.save()
-        return redirect('ordersPage')
-    return render(request, 'orders/vehicle_form.html', {'vehicle': vehicle})
-
-def update_inspection(request, inspection_id):
-    inspection = Inspection.objects.get(id=inspection_id)
-    if request.method == 'POST':
-        inspection.inspection_date = request.POST.get('inspection_date')
-        inspection.inspection_result = request.POST.get('inspection_result')
-        inspection.save()
-        return redirect('ordersPage')
-    return render(request, 'orders/inspection_form.html', {'inspection': inspection})   
-
-def delete_customer(request, customer_id):
-    customer = Customer.objects.get(id=customer_id)
-    customer.delete()
-    return redirect('ordersPage')
-
-def delete_vehicle(request, vehicle_id):
-    vehicle = Vehicle.objects.get(id=vehicle_id)
-    vehicle.delete()
-    return redirect('ordersPage')
-
-def delete_inspection(request, inspection_id):
-    inspection = Inspection.objects.get(id=inspection_id)
-    inspection.delete()
-    return redirect('ordersPage')
-
+    messages.success(request, 'Job card deleted.')
+    return redirect('order_list')

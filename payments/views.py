@@ -1,97 +1,63 @@
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.shortcuts import render, redirect, get_object_or_404
+from django.db.models import Sum
+from employees.access import role_required, ADMIN, SENIOR, TECHNICIAN, user_role
+from orders.models import Order
+from .models import Payment, Receipt
+from .forms import PaymentForm
 
-# Create your views here.
-@login_required
-def paymentPage(request):
-    data = {
-        "title": "Payment page",
-        "payment_options": ["Card", "Cash"]
-    }
-    return render(request, "payments/payments.html", data)
 
-@login_required
-def create_payment(request):
+@role_required(ADMIN, SENIOR, TECHNICIAN)
+def payment_list(request):
+    payments = Payment.objects.select_related('order', 'order__vehicle', 'order__vehicle__customer').order_by('-paid_at')
+    employee = getattr(request.user, 'employee', None)
+    if user_role(request.user) == TECHNICIAN and employee:
+        payments = payments.filter(order__technicians=employee)
+    total = payments.aggregate(total=Sum('amount_paid'))['total'] or 0
+    return render(request, 'payments.html', {'payments': payments, 'total': total})
+
+
+@role_required(ADMIN)
+def payment_add(request):
     if request.method == 'POST':
-        payment_method = request.POST.get('payment_method')
-        amount = request.POST.get('amount')
-
-        new_payment = Payment(
-            payment_method=payment_method,
-            amount=amount
-        )
-        new_payment.save()
-        return redirect('paymentPage')
-    return render(request, 'payments/payment_form.html')
-
-@login_required
-def create_receipt(request):
-    if request.method == 'POST':
-        payment_id = request.POST.get('payment_id')
-        receipt_number = request.POST.get('receipt_number')
-
-        new_receipt = Receipt(
-            payment_id=payment_id,
-            receipt_number=receipt_number
-        )
-        new_receipt.save()
-        return redirect('paymentPage')
-    return render(request, 'payments/receipt_form.html')
-
-@login_required
-def receipt_details(request, receipt_id):
-    receipt = Receipt.objects.get(pk=receipt_id)
-    return render(request, 'payments/view_receipt.html', {'receipt': receipt})
-
-@login_required
-def payment_details(request, payment_id):
-    payment = Payment.objects.get(pk=payment_id)
-    return render(request, 'payments/view_payment.html', {'payment': payment})  
-
-@login_required
-def update_payment(request, payment_id):
-    payment = Payment.objects.get(pk=payment_id)
-    if request.method == 'POST':
-        payment_method = request.POST.get('payment_method')
-        amount = request.POST.get('amount')
-
-        payment.payment_method = payment_method
-        payment.amount = amount
-        payment.save()
-        return redirect('paymentPage')
-    return render(request, 'payments/payment_form.html', {'payment': payment})
-
-@login_required
-def update_receipt(request, receipt_id):
-    receipt = Receipt.objects.get(pk=receipt_id)
-    if request.method == 'POST':
-        payment_id = request.POST.get('payment_id')
-        receipt_number = request.POST.get('receipt_number')
-
-        receipt.payment_id = payment_id
-        receipt.receipt_number = receipt_number
-        receipt.save()
-        return redirect('paymentPage')
-    return render(request, 'payments/receipt_form.html', {'receipt': receipt})
+        form = PaymentForm(request.POST)
+        if form.is_valid():
+            payment = form.save()
+            Receipt.objects.create(
+                payment=payment,
+                receipt_number=f'OAS-{payment.payment_id:04d}',
+            )
+            payment.order.status = 'Completed'
+            payment.order.save()
+            messages.success(request, 'Payment recorded.')
+            return redirect('receipt_view', payment_id=payment.payment_id)
+    else:
+        initial = {}
+        order_id = request.GET.get('order')
+        if order_id:
+            initial['order'] = order_id
+            order = Order.objects.filter(pk=order_id).first()
+            if order:
+                initial['amount_paid'] = order.service_total()
+        form = PaymentForm(initial=initial)
+    return render(request, 'payment_form.html', {
+        'form': form,
+        'title': 'Record Payment',
+        'note': 'Labour is UGX 20,000. Wheel alignment is UGX 30,000 and wheel balance is UGX 20,000.',
+    })
 
 
-@login_required
-def delete_payment(request, payment_id):
-    payment = Payment.objects.get(pk=payment_id)
-    payment.delete()
-    return redirect('paymentPage')  
-
-@login_required
-def delete_receipt(request, receipt_id):
-    receipt = Receipt.objects.get(pk=receipt_id)
-    receipt.delete()
-    return redirect('paymentPage')
-
-@login_required
-def payment_history(request):
-    payments = Payment.objects.all()
-    return render(request, 'payments/payment_history.html', {'payments': payments})
-
-def total_payment_amount(request):
-    total = Payment.objects.aggregate(total_amount=Sum('amount'))['total_amount']
-    return total
+@role_required(ADMIN, SENIOR, TECHNICIAN)
+def receipt_view(request, payment_id):
+    payments = Payment.objects.select_related('order', 'order__vehicle', 'order__vehicle__customer')
+    employee = getattr(request.user, 'employee', None)
+    if user_role(request.user) == TECHNICIAN and employee:
+        payments = payments.filter(order__technicians=employee)
+    payment = get_object_or_404(payments, pk=payment_id)
+    receipt = payment.receipt_set.first()
+    services = payment.order.service.all()
+    return render(request, 'receipt.html', {
+        'payment': payment,
+        'receipt': receipt,
+        'services': services,
+    })
