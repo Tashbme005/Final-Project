@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Customers{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">Customers</h1>
+    <a href="{% url 'customer_add' %}" class="btn btn-bay">Add customer</a>
+</div>
+<p class="text-muted">Next step after a customer is registered: add their vehicle.</p>
+<div class="page-card p-3">
+    <table class="table mb-0">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for customer in customers %}
+            <tr>
+                <td>{{ customer.customer_name }}</td>
+                <td>{{ customer.phone_number }}</td>
+                <td>{{ customer.customer_email }}</td>
+                <td>
+                    <a href="{% url 'vehicle_add' %}?customer={{ customer.customer_id }}">Add vehicle</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4">
+                    No customers yet.
+                    <a href="{% url 'customer_add' %}">Register one</a>.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

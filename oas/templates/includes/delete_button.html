@@ -1,0 +1,4 @@
+<form method="post" action="{% url delete_url pk %}" class="d-inline" onsubmit="return confirm('Delete this record?');">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-link text-danger p-0 align-baseline">Delete</button>
+</form>

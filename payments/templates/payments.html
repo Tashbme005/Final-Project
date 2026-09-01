@@ -1,39 +1,49 @@
-{% extends 'base.html' %}
-
-{% block title %} <h3>Payments</h3> {% endblock %}
-
-{% load humanize %}
+{% extends "base.html" %}
+{% block title %}Payments{% endblock %}
 
 {% block content %}
-    <div class="container mt-4">
-        <div class="card shadow-sm border-0">
-            <div class="card-body">
-                <h1 class="card-title mb-3">{{ title | upper}}</h1>
-
-                <div class="alert alert-info d-flex justify-content-between align-items-center mb-4" role="alert">
-                    <span>Total Amount</span>
-                    <strong>{{ total }}</strong>
-                    <p>Date{{date | date:"Y-m-d"}}</p>
-                </div>
-
-                <h2 class="h4 mb-3">Payment options:</h2>
-
-                {% if payment_options %}
-                    <ul class="list-group">
-                        {% for option in payment_options %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                {{ option }}
-                                <span class="badge bg-primary rounded-pill">Available</span>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <div class="alert alert-warning" role="alert">
-                        No payment options are available at the moment.
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">{% if is_technician %}Client receipts{% else %}Payments{% endif %}</h1>
+    {% if can_manage_payments %}
+    <a href="{% url 'payment_add' %}" class="btn btn-bay">Record payment</a>
+    {% endif %}
+</div>
+<div class="alert alert-dark">Total collected: <strong>UGX {{ total }}</strong></div>
+<div class="page-card p-3">
+    <table class="table mb-0">
+        <thead>
+            <tr>
+                <th>Receipt</th>
+                <th>Job</th>
+                <th>Customer</th>
+                <th>Method</th>
+                <th>Amount (UGX)</th>
+                <th>Date</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for payment in payments %}
+            <tr data-href="{% url 'receipt_view' payment.payment_id %}">
+                <td>{{ payment.payment_id }}</td>
+                <td><a href="{% url 'order_detail' payment.order.order_id %}">#{{ payment.order.order_id }}</a></td>
+                <td>{{ payment.order.vehicle.customer.customer_name }}</td>
+                <td>{{ payment.payment_method }}</td>
+                <td>{{ payment.amount_paid }}</td>
+                <td>{{ payment.paid_at|date:"d M Y" }}</td>
+                <td><a href="{% url 'receipt_view' payment.payment_id %}">Receipt</a></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7">
+                    No payments yet.
+                    {% if can_manage_payments %}
+                    <a href="{% url 'payment_add' %}">Record a payment</a>.
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

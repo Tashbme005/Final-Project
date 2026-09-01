@@ -1,145 +1,161 @@
-from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.views.decorators.http import require_POST
+from .access import role_required, ADMIN, SENIOR, TECHNICIAN, user_role
 from .models import Employee, Role
+from .forms import EmployeeForm, RoleForm
+from orders.models import Customer, Vehicle, Order
+from inventory.models import Part
+from services.models import Service
+from payments.models import Payment
 
 
-# Create your views here.
-def index(request):
-    index = Employee.objects.all()
-    return render(request, "employees/index.html")
-
-@login_required
-def employees(request):
-    employees = Employee.objects.all()
-    return render(request, "employees/employees_list.html", {"employees": employees})
-
-
-@login_required
-def create_employee(request):
+def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('home')
     if request.method == 'POST':
-       employee_name = request.POST.get('employee_name')
-       date_of_birth = request.POST.get('date_of_birth')
-       phone_number = request.POST.get('phone_number')
-       email = request.POST.get('email')
-       nin = request.POST.get('nin')
-       passport_number = request.POST.get('passport_number')
+        username = (request.POST.get('username') or '').strip()
+        password = request.POST.get('password') or ''
+        user = authenticate(request, username=username, password=password)
+        if user is None:
+            from django.contrib.auth.models import User
+            match = User.objects.filter(email__iexact=username).first()
+            if match:
+                user = authenticate(request, username=match.username, password=password)
+        if user is not None:
+            login(request, user)
+            next_url = request.POST.get('next') or request.GET.get('next')
+            if next_url and next_url.startswith('/'):
+                return redirect(next_url)
+            return redirect('home')
+        messages.error(request, 'Invalid username or password.')
+    return render(request, 'employees/login.html', {'next': request.GET.get('next', '')})
 
-       new_employee = Employee(
-           employee_name=employee_name,
-           date_of_birth=date_of_birth,
-           phone_number=phone_number,
-           email=email,
-           nin=nin,
-           passport_number=passport_number,
-       )
-       new_employee.save()
-       return redirect('employees') 
 
-    return render(request, 'employees/employee_form.html')
+@require_POST
+def logout_view(request):
+    logout(request)
+    messages.success(request, 'You have been logged out.')
+    return redirect('login')
 
 
 @login_required
-def add_employee(request):
+def home(request):
+    role = user_role(request.user)
+    employee = getattr(request.user, 'employee', None)
+    orders = Order.objects.all()
+    if role == TECHNICIAN and employee:
+        orders = orders.filter(technicians=employee)
+        recent_orders = orders.select_related('vehicle', 'vehicle__customer').order_by('-created_at')[:8]
+        context = {
+            'technician_count': 1,
+            'customer_count': orders.values('vehicle__customer').distinct().count(),
+            'vehicle_count': orders.values('vehicle').distinct().count(),
+            'order_count': orders.count(),
+            'pending_count': orders.filter(status='Pending').count(),
+            'in_progress_count': orders.filter(status='In Progress').count(),
+            'completed_count': orders.filter(status='Completed').count(),
+            'part_count': 0,
+            'service_count': 0,
+            'payment_count': Payment.objects.filter(order__technicians=employee).count(),
+            'recent_orders': recent_orders,
+        }
+        return render(request, 'employees/index.html', context)
+    recent_orders = Order.objects.select_related('vehicle', 'vehicle__customer').order_by('-created_at')[:8]
+    context = {
+        'technician_count': Employee.objects.count(),
+        'customer_count': Customer.objects.count(),
+        'vehicle_count': Vehicle.objects.count(),
+        'order_count': Order.objects.count(),
+        'pending_count': Order.objects.filter(status='Pending').count(),
+        'in_progress_count': Order.objects.filter(status='In Progress').count(),
+        'completed_count': Order.objects.filter(status='Completed').count(),
+        'part_count': Part.objects.count(),
+        'service_count': Service.objects.count(),
+        'payment_count': Payment.objects.count(),
+        'recent_orders': recent_orders,
+    }
+    return render(request, 'employees/index.html', context)
+
+
+@role_required(ADMIN)
+def employee_list(request):
+    employees = Employee.objects.prefetch_related('role_set').all()
+    extra_roles = Role.objects.select_related('employee').order_by('role')
+    return render(request, 'employees/employees_list.html', {
+        'employees': employees,
+        'extra_roles': extra_roles,
+    })
+
+
+@role_required(ADMIN)
+def employee_add(request):
     if request.method == 'POST':
-        payload = request.POST
-        form = EmployeeForm(payload)
+        form = EmployeeForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('employees')
-    return render(request, 'employees/employee_form.html', {'form': EmployeeForm()})
+            messages.success(request, 'Staff member saved.')
+            return redirect('employee_list')
+    else:
+        form = EmployeeForm()
+    return render(request, 'employees/employee_form.html', {'form': form, 'title': 'Add Staff Member'})
 
 
-@login_required
-def employee_details(request, employee_id):
-    employee = Employee.objects.get(pk=employee_id)
-    return render(request, 'employees/view_employee.html', {'employee': employee})
-
-@login_required
-def update_employee(request, employee_id):
-    employee = Employee.objects.get(pk=employee_id)
+@role_required(ADMIN)
+def employee_edit(request, employee_id):
+    employee = get_object_or_404(Employee, pk=employee_id)
     if request.method == 'POST':
         form = EmployeeForm(request.POST, instance=employee)
         if form.is_valid():
             form.save()
-            return redirect('employees')
+            messages.success(request, 'Staff member updated.')
+            return redirect('employee_list')
     else:
         form = EmployeeForm(instance=employee)
-    return render(request, 'employees/employee_form.html', {'form': form})
+    return render(request, 'employees/employee_form.html', {'form': form, 'title': 'Edit Staff Member'})
 
 
-@login_required
-def delete_employee(request, employee_id):
-    employee = Employee.objects.get(pk=employee_id)
+@role_required(ADMIN)
+@require_POST
+def employee_delete(request, employee_id):
+    employee = get_object_or_404(Employee, pk=employee_id)
     employee.delete()
-    return redirect('employees')
+    messages.success(request, 'Staff member deleted.')
+    return redirect('employee_list')
 
-@login_required
-def employee_roles(request):
-    roles = Role.objects.all()
-    return render(request, "employees/employee_roles.html", {"roles": roles})   
 
-@login_required
-def create_role(request):
+def _form_initial(request, *fields):
+    initial = {}
+    for field in fields:
+        value = request.GET.get(field)
+        if value:
+            initial[field] = value
+    return initial
+
+
+@role_required(ADMIN)
+def role_add(request):
     if request.method == 'POST':
-        employee_id = request.POST.get('employee_id')
-        role = request.POST.get('role')
-        description = request.POST.get('description')
+        form = RoleForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Job role saved.')
+            return redirect('employee_list')
+    else:
+        form = RoleForm(initial=_form_initial(request, 'employee'))
+    return render(request, 'employees/role_form.html', {
+        'form': form,
+        'title': 'Add Job Role',
+        'note': 'Give a staff member another work title at the bay. Login access still follows Admin, Senior technician or Technician.',
+    })
 
-        employee = Employee.objects.get(pk=employee_id)
 
-        new_role = Role(
-            employee=employee,
-            role=role,
-            description=description
-        )
-        new_role.save()
-        return redirect('employee_roles') 
-
-    employees = Employee.objects.all()
-    return render(request, 'employees/role_form.html', {'employees': employees})
-
-@login_required
-def update_role(request, role_id):
-    role = Role.objects.get(pk=role_id)
-    if request.method == 'POST':
-        employee_id = request.POST.get('employee_id')
-        role_name = request.POST.get('role')
-        description = request.POST.get('description')
-
-        employee = Employee.objects.get(pk=employee_id)
-
-        role.employee = employee
-        role.role = role_name
-        role.description = description
-        role.save()
-        return redirect('employee_roles') 
-
-    employees = Employee.objects.all()
-    return render(request, 'employees/role_form.html', {'role': role, 'employees': employees})  
-
-def delete_role(request, role_id):
-    role = Role.objects.get(pk=role_id)
+@role_required(ADMIN)
+@require_POST
+def role_delete(request, role_id):
+    role = get_object_or_404(Role, pk=role_id)
     role.delete()
-    return redirect('employee_roles')
-
-@login_required
-def role_details(request, role_id):
-    role = Role.objects.get(pk=role_id)
-    return render(request, 'employees/view_role.html', {'role': role})  
-
-
-def password_reset(request):
-    if request.method == 'POST':
-        email = request.POST.get('email')
-        new_password = request.POST.get('new_password')
-
-        try:
-            employee = Employee.objects.get(email=email)
-            employee.password = new_password
-            employee.save()
-            return redirect('index')  # Redirect to a success page or login page
-        except Employee.DoesNotExist:
-            error_message = "No employee found with the provided email."
-            return render(request, 'employees/password_reset.html', {'error_message': error_message})
-
-    return render(request, 'employees/password.html')
+    messages.success(request, 'Job role deleted.')
+    return redirect('employee_list')

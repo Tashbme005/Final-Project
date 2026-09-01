@@ -1,94 +1,157 @@
 {% extends "base.html" %}
-
-{% block title %}Index{% endblock %}
-
-{% load humanize %}
+{% block title %}Dashboard{% endblock %}
 
 {% block content %}
-    <h1>Welcome to Oyera Service BAy</h1>
-    <p class="important">
-      Your trust car servicing company.
-    </p>
-    <div class="layout">
-    <aside class="sidebar">
-      <h4 class="brand">Oyera Bay Services</h4>
-      <p class="nav-label">Overview</p>
-      <nav class="nav-links">
-        <a href="index.html" class="active">Home</a>
-        <a href="employee_list.html">Employees</a>
-        <a href="service_list.html">Services</a>
-        <a href="customer_list.html">Customers</a>
-        <a href="invetory_list.html">Inventory</a>
-      </nav>
-    </aside>
-    <main class="main">
-      <h5 class="page-title">Dashboard</h5>
-      <div class="cards-grid">
-        <section class="card">
-          <p class="card-label">Registered Technicians</p>
-          <p class="card-value">{{technician_list}}</p>
-        </section>
-        <section class="card">
-          <p class="card-label">Inventory</p>
-          <p class="card-value">{{part_list}}</p>
-        </section>
-        <section class="card">
-          <p class="card-label">Customers</p>
-          <div class="customer-stats">
-            <p class="stat">{{completed}}</p>
-            <p class="stat muted">{{pending}}</p>
-            <p class="stat muted">{{in_progress}}</p>
-          </div>
-        </section>
-        <section class="card">
-          <p class="card-label">Car in service</p>
-          <p class="card-value">{{order.not_complete}}</p>
-        </section>
-      </div>
-      <div class="table-wrapper">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Customer</th>
-              <th>Service</th>
-              <th>Order</th>
-              <th>Description</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>{{customer_name}}</td>
-              <td>{{service}}</td>
-              <td>{{order}}</td>
-              <td>{{description}}</td>
-              <td>{{status}}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </main>
-    <div class="table-wrapper">
-      table class="table">
-        <thead>
-          <tr>
-            <th>Employee</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th>NIN</th>
-            <th>Passport</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>{{employee_name}}</td>
-            <td>{{email}}</td>
-            <td>{{phone_number}}</td>
-            <td>{{nin}}</td>
-            <td>{{passport_number}}</td>
-          </tr>
-        </tbody>
-      </table>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Oyera Auto Service Bay Ltd</h1>
+        <p class="text-muted mb-0">Use the menu and the cards below. You do not need to type URLs.</p>
     </div>
-  </div>
+    {% if can_manage_jobs %}
+    <a href="{% url 'order_add' %}" class="btn btn-bay">New Job Card</a>
+    {% endif %}
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        {% if can_manage_staff %}
+        <a class="stat-link" href="{% url 'employee_list' %}">
+            <div class="stat" style="background:#1c1917;">
+                <small>Staff / Technicians</small>
+                <h3>{{ technician_count }}</h3>
+            </div>
+        </a>
+        {% else %}
+        <div class="stat" style="background:#1c1917;">
+            <small>Staff / Technicians</small>
+            <h3>{{ technician_count }}</h3>
+        </div>
+        {% endif %}
+    </div>
+    <div class="col-md-3">
+        <a class="stat-link" href="{% if can_manage_customers %}{% url 'customer_list' %}{% else %}{% url 'order_list' %}{% endif %}">
+            <div class="stat" style="background:#c45c12;">
+                <small>Customers</small>
+                <h3>{{ customer_count }}</h3>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a class="stat-link" href="{% if can_manage_customers %}{% url 'vehicle_list' %}{% else %}{% url 'order_list' %}{% endif %}">
+            <div class="stat" style="background:#2563eb;">
+                <small>Cars in records</small>
+                <h3>{{ vehicle_count }}</h3>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a class="stat-link" href="{% url 'order_list' %}">
+            <div class="stat" style="background:#16a34a;">
+                <small>Job cards</small>
+                <h3>{{ order_count }}</h3>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <a class="stat-link" href="{% url 'order_list' %}?status=Pending">
+            <div class="page-card p-3">Pending jobs: <strong>{{ pending_count }}</strong></div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a class="stat-link" href="{% url 'order_list' %}?status=In+Progress">
+            <div class="page-card p-3">In progress: <strong>{{ in_progress_count }}</strong></div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a class="stat-link" href="{% url 'order_list' %}?status=Completed">
+            <div class="page-card p-3">Completed: <strong>{{ completed_count }}</strong></div>
+        </a>
+    </div>
+</div>
+
+<div class="page-card p-4">
+    <h5 class="mb-3">How a car is served</h5>
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        {% if can_manage_customers %}
+        <a href="{% url 'customer_add' %}" class="btn btn-outline-dark">1. Register customer</a>
+        <a href="{% url 'vehicle_add' %}" class="btn btn-outline-dark">2. Register vehicle</a>
+        {% endif %}
+        {% if can_inspect %}
+        <a href="{% url 'inspection_add' %}" class="btn btn-outline-dark">3. Inspect</a>
+        <a href="{% url 'part_request_add' %}" class="btn btn-outline-dark">4. Request parts</a>
+        {% endif %}
+        {% if can_manage_jobs %}
+        <a href="{% url 'order_add' %}" class="btn btn-outline-dark">5. Open job card</a>
+        {% elif can_view_jobs %}
+        <a href="{% url 'order_list' %}" class="btn btn-outline-dark">Open my job cards</a>
+        {% endif %}
+        {% if can_manage_payments %}
+        <a href="{% url 'payment_add' %}" class="btn btn-outline-dark">6. Record payment</a>
+        {% elif can_view_receipts %}
+        <a href="{% url 'payment_list' %}" class="btn btn-outline-dark">View receipts</a>
+        {% endif %}
+        {% if can_view_parts %}
+        <a href="{% url 'part_list' %}" class="btn btn-outline-secondary">{% if is_technician %}Issued parts{% else %}Parts{% endif %}</a>
+        {% endif %}
+    </div>
+    <ol class="mb-0 text-muted">
+        <li>Register the customer and the vehicle (heavy, small or commercial).</li>
+        <li>A senior technician inspects the car and lists the parts and oils needed.</li>
+        <li>The owner buys the parts (filters, engine oil, gearbox oil, brake fluid, pads).</li>
+        <li>The car goes to a bay. One or more technicians do one or more services.</li>
+        <li>Labour is UGX 20,000. Wheel alignment is UGX 30,000. Wheel balance is UGX 20,000.</li>
+        <li>Payment is recorded and a receipt is issued.</li>
+    </ol>
+</div>
+
+<div class="page-card p-4 mt-4">
+    <div class="d-flex justify-content-between mb-3">
+        <h5 class="mb-0">Recent job cards</h5>
+        <a href="{% url 'order_list' %}">View all</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Job</th>
+                    <th>Customer</th>
+                    <th>Vehicle</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in recent_orders %}
+                <tr data-href="{% url 'order_detail' order.order_id %}">
+                    <td>#{{ order.order_id }}</td>
+                    <td>{{ order.vehicle.customer.customer_name }}</td>
+                    <td>{{ order.vehicle.number_plate }}</td>
+                    <td>
+                        {% if order.status == 'Completed' %}
+                            <span class="badge badge-done">{{ order.status }}</span>
+                        {% elif order.status == 'In Progress' %}
+                            <span class="badge badge-progress">{{ order.status }}</span>
+                        {% else %}
+                            <span class="badge badge-pending">{{ order.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td><a href="{% url 'order_detail' order.order_id %}">Open</a></td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-muted">
+                        No job cards yet.
+                        {% if can_manage_customers %}
+                        <a href="{% url 'customer_add' %}">Start by adding a customer</a>.
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}

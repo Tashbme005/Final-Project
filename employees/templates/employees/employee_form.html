@@ -1,51 +1,206 @@
-{% extends 'base.html' %}
-
-{% block title %} <h1>Employee Form</h1> {% endblock %}
-
-{% load humanize %}
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h2 class="mb-4">Register New Employee</h2>
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="page-card p-4">
+            <h1 class="h4 mb-3">{{ title }}</h1>
+            {% if note %}<p class="text-muted">{{ note }}</p>{% endif %}
 
-                    <form action="{% url 'create new employee' %}" method="post">
-                        {% csrf_token %}
+            <form method="post" novalidate id="staff-form">
+                {% csrf_token %}
 
-                        <h3 class="mb-3">General Employee Information</h3>
-                        <hr>
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                {% endif %}
 
-                        {% if form.non_field_errors %}
-                            <div class="alert alert-danger">
-                                {{ form.non_field_errors }}
-                            </div>
-                        {% endif %}
-
-                        <div class="row g-3">
-                            {% for field in form %}
-                                <div class="col-md-6">
-                                    <div class="form-group mb-3">
-                                        {{ field }}
-                                        {{ field }}
-                                        {% if field.errors %}
-                                            <div class="text-primary small mt-1">
-                                                {{ field.errors }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        </div>
-
-                        <div class="d-flex justify-content-between align-items-center mt-4">
-                            <button type="submit" class="btn btn-primary">Save Employee</button>
-                            <a href="{% url 'employees_list' %}" class="btn btn-outline-secondary">Cancel</a>
-                        </div>
-                    </form>
+                <div class="mb-3">
+                    <label class="form-label" for="id_employee_name">Employee name <span class="text-danger">*</span></label>
+                    {{ form.employee_name }}
+                    <div class="live-error text-danger small mt-1" data-error-for="employee_name">
+                        {% for error in form.employee_name.errors %}{{ error }}{% endfor %}
+                    </div>
                 </div>
-            </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="id_date_of_birth">Date of birth <span class="text-danger">*</span></label>
+                    {{ form.date_of_birth }}
+                    <div class="live-error text-danger small mt-1" data-error-for="date_of_birth">
+                        {% for error in form.date_of_birth.errors %}{{ error }}{% endfor %}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="id_phone_number">Phone number <span class="text-danger">*</span></label>
+                    {{ form.phone_number }}
+                    <div class="form-text">Use 10 digits, for example 0772123456.</div>
+                    <div class="live-error text-danger small mt-1" data-error-for="phone_number">
+                        {% for error in form.phone_number.errors %}{{ error }}{% endfor %}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="id_email">Email <span class="text-danger">*</span></label>
+                    {{ form.email }}
+                    <div class="live-error text-danger small mt-1" data-error-for="email">
+                        {% for error in form.email.errors %}{{ error }}{% endfor %}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="id_job_role">Job role <span class="text-danger">*</span></label>
+                    {{ form.job_role }}
+                    <div class="form-text">This sets login access. You can add another work title from Staff → Add job role.</div>
+                    <div class="live-error text-danger small mt-1">
+                        {% for error in form.job_role.errors %}{{ error }}{% endfor %}
+                    </div>
+                </div>
+
+                <fieldset class="mb-3">
+                    <legend class="form-label fs-6">Do you have a NIN? <span class="text-danger">*</span></legend>
+                    {% for radio in form.id_kind %}
+                        <div class="form-check">
+                            {{ radio.tag }}
+                            <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                        </div>
+                    {% endfor %}
+                    <div class="live-error text-danger small mt-1">
+                        {% for error in form.id_kind.errors %}{{ error }}{% endfor %}
+                    </div>
+                </fieldset>
+
+                <div class="mb-3" id="nin-group">
+                    <label class="form-label" for="id_nin">NIN <span class="text-danger">*</span></label>
+                    {{ form.nin }}
+                    <div class="live-error text-danger small mt-1" data-error-for="nin">
+                        {% for error in form.nin.errors %}{{ error }}{% endfor %}
+                    </div>
+                </div>
+
+                <div class="mb-3 d-none" id="passport-group">
+                    <label class="form-label" for="id_passport_number">Passport number <span class="text-danger">*</span></label>
+                    {{ form.passport_number }}
+                    <div class="form-text">Required for foreigners who do not have a NIN.</div>
+                    <div class="live-error text-danger small mt-1" data-error-for="passport_number">
+                        {% for error in form.passport_number.errors %}{{ error }}{% endfor %}
+                    </div>
+                </div>
+
+                <button class="btn btn-bay" type="submit">Save</button>
+                <a href="{% url 'employee_list' %}" class="btn btn-outline-secondary">Cancel</a>
+            </form>
         </div>
     </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var form = document.getElementById('staff-form');
+    if (!form) return;
+
+    var ninGroup = document.getElementById('nin-group');
+    var passportGroup = document.getElementById('passport-group');
+    var nameInput = document.getElementById('id_employee_name');
+    var dobInput = document.getElementById('id_date_of_birth');
+    var phoneInput = document.getElementById('id_phone_number');
+    var emailInput = document.getElementById('id_email');
+    var ninInput = document.getElementById('id_nin');
+    var passportInput = document.getElementById('id_passport_number');
+
+    function isForeigner() {
+        var selected = form.querySelector('input[name="id_kind"]:checked');
+        return selected && selected.value === 'no';
+    }
+
+    function setMessage(input, message) {
+        if (!input) return;
+        var box = form.querySelector('[data-error-for="' + input.name + '"]');
+        input.classList.remove('is-valid', 'is-invalid');
+        if (message) {
+            input.classList.add('is-invalid');
+        } else if (input.value.trim()) {
+            input.classList.add('is-valid');
+        }
+        if (box) box.textContent = message || '';
+    }
+
+    function toggleIdFields(clearHidden) {
+        var foreigner = isForeigner();
+        ninGroup.classList.toggle('d-none', foreigner);
+        passportGroup.classList.toggle('d-none', !foreigner);
+        if (!clearHidden) return;
+        if (foreigner) {
+            ninInput.value = '';
+            setMessage(ninInput, '');
+            ninInput.classList.remove('is-valid', 'is-invalid');
+        } else {
+            passportInput.value = '';
+            setMessage(passportInput, '');
+            passportInput.classList.remove('is-valid', 'is-invalid');
+        }
+    }
+
+    form.querySelectorAll('input[name="id_kind"]').forEach(function (radio) {
+        radio.addEventListener('change', function () { toggleIdFields(true); });
+    });
+
+    function checkName() {
+        var value = nameInput.value.trim();
+        if (!value) return setMessage(nameInput, 'Enter the staff member full name.');
+        if (value.split(/\s+/).length < 2) return setMessage(nameInput, 'Enter a first name and a last name.');
+        setMessage(nameInput, '');
+    }
+
+    function checkDob() {
+        if (!dobInput.value) return setMessage(dobInput, 'Enter the date of birth.');
+        setMessage(dobInput, '');
+    }
+
+    function checkPhone() {
+        var value = phoneInput.value.trim();
+        if (!value) return setMessage(phoneInput, 'Enter a phone number.');
+        if (!/^0\d{9}$/.test(value)) return setMessage(phoneInput, 'Enter a valid Ugandan phone number, for example 0772123456.');
+        setMessage(phoneInput, '');
+    }
+
+    function checkEmail() {
+        var value = emailInput.value.trim();
+        if (!value) return setMessage(emailInput, 'Enter an email address.');
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return setMessage(emailInput, 'Enter a valid email address.');
+        setMessage(emailInput, '');
+    }
+
+    function checkNin() {
+        if (isForeigner()) return;
+        var value = ninInput.value.trim();
+        if (!value) return setMessage(ninInput, 'Enter the NIN.');
+        if (!/^[A-Za-z0-9]{5,20}$/.test(value)) return setMessage(ninInput, 'Enter a valid NIN using letters and numbers only.');
+        setMessage(ninInput, '');
+    }
+
+    function checkPassport() {
+        if (!isForeigner()) return;
+        var value = passportInput.value.trim();
+        if (!value) return setMessage(passportInput, 'Passport number is required.');
+        if (value.length < 6) return setMessage(passportInput, 'Passport number is too short.');
+        setMessage(passportInput, '');
+    }
+
+    form.querySelectorAll('input[name="id_kind"]').forEach(function (radio) {
+        radio.addEventListener('change', toggleIdFields);
+    });
+
+    nameInput.addEventListener('input', checkName);
+    dobInput.addEventListener('change', checkDob);
+    phoneInput.addEventListener('input', checkPhone);
+    emailInput.addEventListener('input', checkEmail);
+    ninInput.addEventListener('input', checkNin);
+    passportInput.addEventListener('input', checkPassport);
+
+    toggleIdFields(false);
+})();
+</script>
 {% endblock %}

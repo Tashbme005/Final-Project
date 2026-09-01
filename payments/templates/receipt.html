@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Receipt{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="page-card p-4">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h1 class="h4 mb-0">Oyera Auto Service Bay Ltd</h1>
+                    <p class="text-muted mb-0">Payment receipt</p>
+                </div>
+                <div class="text-end">
+                    <strong>{{ receipt.receipt_number|default:"Pending" }}</strong><br>
+                    {{ payment.paid_at|date:"d M Y H:i" }}
+                </div>
+            </div>
+            <hr>
+            <p>
+                <strong>Customer:</strong> {{ payment.order.vehicle.customer.customer_name }}<br>
+                <strong>Vehicle:</strong> {{ payment.order.vehicle.number_plate }} · {{ payment.order.vehicle.car_model }}<br>
+                <strong>Job card:</strong> #{{ payment.order.order_id }}<br>
+                <strong>Method:</strong> {{ payment.payment_method }}
+            </p>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Service</th>
+                        <th class="text-end">Amount (UGX)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for service in services %}
+                    <tr>
+                        <td>{{ service.service_name }}</td>
+                        <td class="text-end">{{ service.unit_cost }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="2">No service lines.</td></tr>
+                    {% endfor %}
+                    <tr>
+                        <th>Total paid</th>
+                        <th class="text-end">{{ payment.amount_paid }}</th>
+                    </tr>
+                </tbody>
+            </table>
+            {% if payment.comment %}<p>{{ payment.comment }}</p>{% endif %}
+            <p class="text-muted">Thank you for servicing with OAS Bay.</p>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'order_detail' payment.order.order_id %}" class="btn btn-bay">Back to job card</a>
+                <a href="{% url 'payment_list' %}" class="btn btn-outline-secondary">{% if is_technician %}Back to receipts{% else %}Back to payments{% endif %}</a>
+                <a href="{% url 'home' %}" class="btn btn-outline-secondary">Dashboard</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,31 +1,97 @@
 {% extends "base.html" %}
-{% block title %} <h1>Employees</h1> {% endblock %}
-
-{% load humanize %}
+{% block title %}Staff{% endblock %}
 
 {% block content %}
-<table class="table-light table-hover">
-  <table class="table">
-    <thead>
-      <tr>
-      <th scope="col">id</th>
-      <th scope="col">Names</th>
-      <th scope="col">Emails</th>
-      <th scope="col">Phone numbers</th>
-      <th scope="col">NIN</th>
-      <th scope="col">Passport numbers</th>
-      </tr>
-    </thead>
-    <tbody class="table-group-divider">
-      <tr>
-        <th scope="row">{{employee_id}}</th>
-        <td>{{employee_name}}</td>
-        <td>{{email}}</td>
-        <td>{{phone_number}}</td>
-        <td>{{nin}}</td>
-        <td>{{passport_number}}</td>
-      </tr>
-    </tbody>
-  </table>
-  </table>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">Technicians and staff</h1>
+    <div class="d-flex gap-2">
+        <a href="{% url 'role_add' %}" class="btn btn-outline-dark">Add job role</a>
+        <a href="{% url 'employee_add' %}" class="btn btn-bay">Add staff</a>
+    </div>
+</div>
+<div class="page-card p-3">
+    <table class="table mb-0">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Job role</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th>ID document</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for employee in employees %}
+            <tr>
+                <td>{{ employee.employee_name }}</td>
+                <td>
+                    {{ employee.get_job_role_display }}
+                    {% for extra in employee.role_set.all %}
+                        <div class="small text-muted">{{ extra.role }}</div>
+                    {% endfor %}
+                </td>
+                <td>{{ employee.phone_number }}</td>
+                <td>{{ employee.email }}</td>
+                <td>
+                    {% if employee.has_nin %}
+                        NIN: {{ employee.nin }}
+                    {% else %}
+                        Passport: {{ employee.passport_number }}
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'role_add' %}?employee={{ employee.employee_id }}">Add job role</a>
+                    <a href="{% url 'employee_edit' employee.employee_id %}">Edit</a>
+                    {% include 'includes/delete_button.html' with delete_url='employee_delete' pk=employee.employee_id %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6">
+                    No staff yet.
+                    <a href="{% url 'employee_add' %}">Add a staff member</a>.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mt-4 mb-3">
+    <h2 class="h5 mb-0">Extra job roles</h2>
+    <a href="{% url 'role_add' %}" class="btn btn-outline-dark">Add job role</a>
+</div>
+<p class="text-muted">These are extra work titles on top of Admin, Senior technician or Technician.</p>
+<div class="page-card p-3">
+    <table class="table mb-0">
+        <thead>
+            <tr>
+                <th>Staff member</th>
+                <th>Job role</th>
+                <th>What they do</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for role in extra_roles %}
+            <tr>
+                <td>{{ role.employee.employee_name }}</td>
+                <td>{{ role.role }}</td>
+                <td>{{ role.description|default:"-" }}</td>
+                <td>
+                    {% include 'includes/delete_button.html' with delete_url='role_delete' pk=role.role_id %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4">
+                    No extra job roles yet.
+                    <a href="{% url 'role_add' %}">Create one</a>.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

@@ -1,96 +1,81 @@
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.shortcuts import render, redirect, get_object_or_404
+from django.views.decorators.http import require_POST
+from employees.access import role_required, ADMIN, SENIOR, TECHNICIAN, user_role
+from .models import Part, PartsRequest
+from .forms import PartForm, PartsRequestForm
 
-# Create your views here.
-@login_required
-def inventoryPage(request):
+
+@role_required(ADMIN, SENIOR, TECHNICIAN)
+def part_list(request):
+    employee = getattr(request.user, 'employee', None)
+    if user_role(request.user) == TECHNICIAN and employee:
+        issued = PartsRequest.objects.filter(
+            issued_to=employee,
+            status='Issued',
+        ).select_related('part', 'requested_by').order_by('-requested_at')
+        return render(request, 'inventory/part_list.html', {
+            'parts': [],
+            'requests': issued,
+            'issued_only': True,
+        })
     parts = Part.objects.all()
-    return render(request, "inventory.part_list.html", {"parts": parts})
-
-@login_required
-def index(request):
-    form = MyForm()
-    rendered_form = form.render("form_snippet.html")
-    context = {"form": rendered_form}
-    return render(request, "add.html", context)
+    requests = PartsRequest.objects.select_related('part', 'requested_by', 'issued_to').order_by('-requested_at')[:10]
+    return render(request, 'inventory/part_list.html', {
+        'parts': parts,
+        'requests': requests,
+        'issued_only': False,
+    })
 
 
-@login_required
-def create_part(request):
+@role_required(ADMIN)
+def part_add(request):
     if request.method == 'POST':
-        part_name = request.POST.get('part_name')
-        quantity_in_stock = request.POST.get('quantity_in_stock')
-        unit_cost = request.POST.get('unit_cost')
-
-        new_part = Part(
-            part_name=part_name,
-            quantity_in_stock=quantity_in_stock,
-            unit_cost=unit_cost
-        )
-        new_part.save()
-        return redirect('PartForm')
-    return render(request, 'part/part_form.html')
-
-@login_required
-def view_part(request, part_id):
-    part = Part.objects.get(pk=part_id)
-    return render(request, 'part/view_part.html', {'part':part})
-
-
-@login_required
-def part_request(request):
-    if request.method == 'POST':
-        part_request = Part.objects.all()
-        part_request = request.POST.get('part_request')
-        new_request = PartsRequest(
-            part_request=part_request
-        )
-        new_request.save()
-        return redirect('PartsRequestForm')
-    return render(request, 'part/parts_request_form.html')
-
-@login_required
-def add_part(request):
-    if request.method == 'POST':
-        payload = request.POST
-        form = PartForm(payload)
+        form = PartForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('inventoryPage')
-    return render(request, 'part/part_form.html', {'form': PartForm()})
+            messages.success(request, 'Part saved.')
+            return redirect('part_list')
+    else:
+        form = PartForm()
+    return render(request, 'inventory/part_form.html', {'form': form, 'title': 'Add Part'})
 
-@login_required
-def part_details(request, part_id):
-    part = Part.objects.get(pk=part_id)
-    return render(request, 'part/view_part.html', {'part': part})
 
-@login_required
-def part_request_details(request, part_request_id):
-    part_request = PartsRequest.objects.get(pk=part_request_id)
-    return render(request, 'part/view_part_request.html', {'part_request': part_request})
-
-@login_required
-def delete_part_request(request, part_request_id):
-    part_request = PartsRequest.objects.get(pk=part_request_id)
-    part_request.delete()
-    return redirect('inventoryPage')
-
-@login_required
-def update_part(request, part_id):
-    part = Part.objects.get(pk=part_id)
+@role_required(ADMIN)
+def part_edit(request, part_id):
+    part = get_object_or_404(Part, pk=part_id)
     if request.method == 'POST':
-        part.part_name = request.POST.get('part_name')
-        part.quantity_in_stock = request.POST.get('quantity_in_stock')
-        part.unit_price = request.POST.get('unit_price')
-        part.save()
-        return redirect('inventoryPage')
-    return render(request, 'part/part_form.html', {'part': part})
+        form = PartForm(request.POST, instance=part)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Part updated.')
+            return redirect('part_list')
+    else:
+        form = PartForm(instance=part)
+    return render(request, 'inventory/part_form.html', {'form': form, 'title': 'Edit Part'})
 
-@login_required
-def delete_part(request, part_id):
-    part = Part.objects.get(pk=part_id)
+
+@role_required(ADMIN)
+@require_POST
+def part_delete(request, part_id):
+    part = get_object_or_404(Part, pk=part_id)
     part.delete()
-    return redirect('inventoryPage')   
+    messages.success(request, 'Part deleted.')
+    return redirect('part_list')
 
-def tests(request):
-    return render(request, 'tests.py', {'tests': tests})
+
+@role_required(ADMIN, SENIOR)
+def part_request_add(request):
+    if request.method == 'POST':
+        form = PartsRequestForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Parts request saved.')
+            return redirect('part_list')
+    else:
+        form = PartsRequestForm()
+    return render(request, 'inventory/part_form.html', {
+        'form': form,
+        'title': 'Request Parts for a Job',
+        'note': 'Senior technician selects the oils and filters the owner should buy.',
+    })

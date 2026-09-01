@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Inspections{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">Senior technician inspections</h1>
+    <a href="{% url 'inspection_add' %}" class="btn btn-bay">New inspection</a>
+</div>
+<p class="text-muted">Record findings and the recommended service. Then request the parts/oils the owner should buy, and open a job card with the best-suited service. You cannot add new services or parts.</p>
+<div class="page-card p-3">
+    <table class="table mb-0">
+        <thead>
+            <tr>
+                <th>Vehicle</th>
+                <th>Findings</th>
+                <th>Recommended service</th>
+                <th>Date</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for inspection in inspections %}
+            <tr>
+                <td>{{ inspection.vehicle.number_plate }}</td>
+                <td>{{ inspection.findings }}</td>
+                <td>{{ inspection.recommended_service }}</td>
+                <td>{{ inspection.done_at|date:"d M Y H:i" }}</td>
+                <td>
+                    {% if can_request_parts %}
+                    <a href="{% url 'part_request_add' %}">Request parts</a>
+                    {% endif %}
+                    {% if can_manage_jobs %}
+                    <a href="{% url 'order_add' %}?vehicle={{ inspection.vehicle.vehicle_id }}">New job card</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5">
+                    No inspections yet.
+                    <a href="{% url 'inspection_add' %}">Record one</a>.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

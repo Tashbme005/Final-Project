@@ -1,23 +1,19 @@
-{% extends 'base.html' %}
-
-{% block title %}Payment Form{% endblock %}
-
-{% load humanize %}
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-    <form method="post">
-        {% csrf_token %}
-        <div class="form-group">
-            <h1>{{ title }}</h1>
-            <label for="amount">Amount: {{total}}</label>
-            <input type="number" class="form-control" id="amount" name="amount" step="0.01" required>
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="page-card p-4">
+            <h1 class="h4 mb-3">{{ title }}</h1>
+            {% if note %}<p class="text-muted">{{ note }}</p>{% endif %}
+            <form method="post" novalidate>
+                {% csrf_token %}
+                {% include 'includes/form_fields.html' %}
+                <button class="btn btn-bay" type="submit">Save payment</button>
+                <a href="{% url 'payment_list' %}" class="btn btn-outline-secondary">Cancel</a>
+            </form>
         </div>
-        <div class="form-group">
-            <h2>Payment options</h2>
-                {% for option in payment_options %}
-                    <li>{{ option }}</li>
-                {% endfor %}
-        </div>
-        <button type="submit" class="btn btn-primary">Submit Payment</button>
-    </form>
+    </div>
+</div>
 {% endblock %}
