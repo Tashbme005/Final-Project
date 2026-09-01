@@ -113,8 +113,29 @@ def postgres_from_url(database_url):
     }
 
 
-if os.environ.get('DATABASE_URL'):
-    DATABASES = {'default': postgres_from_url(os.environ['DATABASE_URL'])}
+def database_url_from_env():
+    for name in (
+        'DATABASE_URL',
+        'POSTGRES_URL_NON_POOLING',
+        'POSTGRES_URL',
+        'POSTGRES_PRISMA_URL',
+    ):
+        value = (os.environ.get(name) or '').strip()
+        if value:
+            return value
+    return ''
+
+
+POSTGRES_URL = database_url_from_env()
+if POSTGRES_URL:
+    DATABASES = {'default': postgres_from_url(POSTGRES_URL)}
+elif ON_VERCEL:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': '/tmp/oasbay.sqlite3',
+        }
+    }
 else:
     DATABASES = {
         'default': {

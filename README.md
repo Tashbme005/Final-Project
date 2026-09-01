@@ -71,12 +71,17 @@ python manage.py runserver 8001
 
 ## Deploy on Vercel
 
-SQLite will not keep data on Vercel. Add a Postgres database (Vercel Storage, Neon, or Supabase). In the Vercel project open **Settings**, then **Environment Variables**, and add them for Production, Preview, and Development:
+SQLite will not keep data on Vercel, and the login page needs a database. Deleting `db.sqlite3` from GitHub is correct. Attach a **Postgres** store in Vercel (**Storage**), or set one of these for Production, Preview, and Development:
+
+* `DATABASE_URL` or `POSTGRES_URL` (Vercel Postgres / Neon set these when you connect the store)
+
+Also set:
 
 * `DJANGO_SECRET_KEY`: a long random string. Create one with `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"`
 * `DJANGO_DEBUG`: `False`
 * `DJANGO_ALLOWED_HOSTS`: `.vercel.app`
-* `DATABASE_URL`: set automatically if you attach Vercel Postgres
+
+The demo SQLite file `db.sqlite3` is in the repo so Vercel can copy it to a writable temp folder and use the same records as local. Attach Postgres later if you need data to stay after the server sleeps.
 
 Then:
 

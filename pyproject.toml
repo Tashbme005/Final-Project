@@ -13,4 +13,4 @@ dependencies = [
 entrypoint = "oas.wsgi:application"
 
 [tool.vercel.scripts]
-build = 'if [ -n "$DATABASE_URL" ]; then python manage.py migrate --noinput && python manage.py seed_data; fi'
+build = 'if [ -n "$DATABASE_URL$POSTGRES_URL$POSTGRES_URL_NON_POOLING" ]; then python manage.py migrate --noinput && python manage.py seed_data; fi'

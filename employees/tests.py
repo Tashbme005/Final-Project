@@ -1,4 +1,5 @@
 from datetime import date
+import os
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
@@ -307,3 +308,18 @@ class DeploySettingsTests(TestCase):
         self.assertEqual(config['HOST'], 'db.example.com')
         self.assertEqual(config['PORT'], '5432')
         self.assertEqual(config['OPTIONS']['sslmode'], 'require')
+
+    def test_postgres_url_is_read_from_common_vercel_names(self):
+        from oas.settings import database_url_from_env
+        previous = os.environ.get('POSTGRES_URL')
+        os.environ['POSTGRES_URL'] = 'postgres://bay:secret@db.example.com:5432/oasbay'
+        try:
+            self.assertEqual(
+                database_url_from_env(),
+                'postgres://bay:secret@db.example.com:5432/oasbay',
+            )
+        finally:
+            if previous is None:
+                os.environ.pop('POSTGRES_URL', None)
+            else:
+                os.environ['POSTGRES_URL'] = previous
