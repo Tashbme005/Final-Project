@@ -20,7 +20,9 @@ db.sqlite3-journal
 
 # Environment
 .env
+.env.local
 !.env.example
+.vercel
 
 # Editors / OS
 .idea/

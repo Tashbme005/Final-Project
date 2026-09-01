@@ -43,7 +43,7 @@ class EmployeeForm(forms.ModelForm):
             'job_role': forms.Select(attrs={'class': 'form-select'}),
             'nin': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'e.g. CM840312001ABC',
+                'placeholder': 'for example CM840312001ABC',
                 'maxlength': '20',
             }),
             'passport_number': forms.TextInput(attrs={

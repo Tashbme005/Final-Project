@@ -18,7 +18,7 @@
             <hr>
             <p>
                 <strong>Customer:</strong> {{ payment.order.vehicle.customer.customer_name }}<br>
-                <strong>Vehicle:</strong> {{ payment.order.vehicle.number_plate }} · {{ payment.order.vehicle.car_model }}<br>
+                <strong>Vehicle:</strong> {{ payment.order.vehicle.number_plate }} {{ payment.order.vehicle.car_model }}<br>
                 <strong>Job card:</strong> #{{ payment.order.order_id }}<br>
                 <strong>Method:</strong> {{ payment.payment_method }}
             </p>

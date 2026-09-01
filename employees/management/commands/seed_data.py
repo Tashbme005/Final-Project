@@ -35,7 +35,7 @@ class Command(BaseCommand):
         self.ensure_logins()
         self.ensure_issued_parts()
         self.stdout.write(self.style.SUCCESS('Sample records and login accounts are ready.'))
-        self.stdout.write('Login at /login/  admin/OasAdmin1  james/OasSenior1  mary/OasTech1')
+        self.stdout.write('Login at /  admin/OasAdmin1  james/OasSenior1  mary/OasTech1')
 
     def ensure_logins(self):
         attach_login('admin', 'OasAdmin1', is_superuser=True)
@@ -142,4 +142,4 @@ class Command(BaseCommand):
         o3.technicians.add(senior, tech1)
 
         payment = Payment.objects.create(order=o1, payment_status='Paid', payment_method='Cash', amount_paid=o1.service_total(), comment='Owner already bought oil and filter')
-        Receipt.objects.create(payment=payment, receipt_number='OAS-0001')
+        Receipt.objects.create(payment=payment, receipt_number='OAS0001')

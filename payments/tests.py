@@ -51,11 +51,11 @@ class PaymentTests(TestCase):
         )
         receipt = Receipt.objects.create(
             payment=payment,
-            receipt_number='OAS-0001',
+            receipt_number='OAS0001',
         )
         self.assertEqual(payment.amount_paid, Decimal('20000'))
-        self.assertEqual(str(receipt), 'OAS-0001')
-        self.assertEqual(str(payment), 'Payment 1 - Paid')
+        self.assertEqual(str(receipt), 'OAS0001')
+        self.assertEqual(str(payment), 'Payment 1 Paid')
 
     def test_payment_pages_open(self):
         payment = Payment.objects.create(
@@ -63,7 +63,7 @@ class PaymentTests(TestCase):
             payment_method='Cash',
             amount_paid=Decimal('20000'),
         )
-        Receipt.objects.create(payment=payment, receipt_number='OAS-0001')
+        Receipt.objects.create(payment=payment, receipt_number='OAS0001')
         self.assertEqual(self.client.get(reverse('payment_list')).status_code, 200)
         self.assertEqual(self.client.get(reverse('payment_add')).status_code, 200)
         self.assertEqual(
@@ -83,7 +83,7 @@ class PaymentTests(TestCase):
         self.assertTrue(Receipt.objects.filter(payment=payment).exists())
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, 'Completed')
-        self.assertEqual(payment.receipt_set.first().receipt_number, f'OAS-{payment.payment_id:04d}')
+        self.assertEqual(payment.receipt_set.first().receipt_number, f'OAS{payment.payment_id:04d}')
 
     def test_empty_payment_form_shows_error_messages(self):
         response = self.client.post(reverse('payment_add'), {

@@ -78,7 +78,7 @@
             <tr>
                 <td>{{ role.employee.employee_name }}</td>
                 <td>{{ role.role }}</td>
-                <td>{{ role.description|default:"-" }}</td>
+                <td>{{ role.description|default:"None" }}</td>
                 <td>
                     {% include 'includes/delete_button.html' with delete_url='role_delete' pk=role.role_id %}
                 </td>
