@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="docs/banner.jpg" alt="OAS Bay: Oyera Auto Service Bay Ltd" width="100%">
-</p>
-
 # OAS Bay: Oyera Auto Service Bay Ltd
 
 Records management web app for a Refactory final-year project. The bay services heavy, small and commercial cars for engine oil and filters, gearbox oil and filters, brake fluids, brake pads, greasing, minor repairs, wheel alignment and wheel balance.
