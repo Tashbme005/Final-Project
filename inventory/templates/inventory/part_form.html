@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Part Form{% endblock %}
+
+{% load humanize %}
+
+{% block content %}
+    <div class="part-form-container">
+        <h1>Part Management Form</h1>
+        <p class="form-description">
+            Use this form to create and update inventory parts. 
+        </p>
+        
+        {% if form.non_field_errors %}
+            <div class="error-messages">
+                <p><strong>Please correct the following errors:</strong></p>
+                <ul>
+                    {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+        
+        <form method="post" class="part-form">
+            {% csrf_token %}
+            
+            <fieldset>
+                <legend>Part Details</legend>
+                <div class="form-fields">
+                    {{ form.as_p }}
+                </div>
+            </fieldset>
+            
+            <fieldset>
+                <legend>Unit Cost Information</legend>
+                <div class="unit-cost-section">
+                    <p>
+                        <label for="unit-cost"><strong>Unit Cost:</strong></label>
+                        <input type="text" id="unit-cost" name="unit_cost" placeholder="Enter unit cost (e.g., $25.50)" />
+                    </p>
+                    <p class="help-text">
+                        Enter the cost per unit for this part. This is used for inventory valuation and cost tracking.
+                    </p>
+                </div>
+            </fieldset>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">Save Part</button>
+                <a href="{% url 'part-list' %}" class="btn-secondary">Look at parts currently available</a>
+            </div>
+        </form>
+    
+    </div>
+{% endblock %}

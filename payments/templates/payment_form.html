@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}Payment Form{% endblock %}
+
+{% load humanize %}
+
+{% block content %}
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <h1>{{ title }}</h1>
+            <label for="amount">Amount: {{total}}</label>
+            <input type="number" class="form-control" id="amount" name="amount" step="0.01" required>
+        </div>
+        <div class="form-group">
+            <h2>Payment options</h2>
+                {% for option in payment_options %}
+                    <li>{{ option }}</li>
+                {% endfor %}
+        </div>
+        <button type="submit" class="btn btn-primary">Submit Payment</button>
+    </form>
+{% endblock %}

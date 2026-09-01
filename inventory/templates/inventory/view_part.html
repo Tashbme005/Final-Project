@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}View Part{% endblock %}
+
+{% load humanize %}
+
+{% block content %}
+    <div class="part-details-container">
+        <h1>Part Details</h1>
+        <p class="part-description">
+            View part
+        </p>
+        
+        <div class="part-details">
+            <p><strong>Part Name:</strong> {{ part.name }}</p>
+            <p><strong>Description:</strong> {{ part.description }}</p>
+            <p><strong>Quantity:</strong> {{ part.quantity }}</p>
+            <p><strong>Requested By:</strong> {{ part.requested_by }}</p>
+            <p><strong>Requested At:</strong> {{ part.requested_at }}</p>
+            <p><strong>Status:</strong> {{ part.status }}</p>
+        </div>
+
+        <div class="part-actions">
+            <a href="{% url 'update_part' part.id %}" class="btn-edit">Edit Part</a>
+            <a href="{% url 'delete_part' part.id %}" class="btn-delete">Delete Part</a>
+            <a href="{% url 'part-list' %}" class="btn-back">Back to Part List</a>
+        </div>
+    </div>
+{% endblock %}

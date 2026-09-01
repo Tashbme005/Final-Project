@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %} <h3>Payments</h3> {% endblock %}
+
+{% load humanize %}
+
+{% block content %}
+    <div class="container mt-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <h1 class="card-title mb-3">{{ title | upper}}</h1>
+
+                <div class="alert alert-info d-flex justify-content-between align-items-center mb-4" role="alert">
+                    <span>Total Amount</span>
+                    <strong>{{ total }}</strong>
+                    <p>Date{{date | date:"Y-m-d"}}</p>
+                </div>
+
+                <h2 class="h4 mb-3">Payment options:</h2>
+
+                {% if payment_options %}
+                    <ul class="list-group">
+                        {% for option in payment_options %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ option }}
+                                <span class="badge bg-primary rounded-pill">Available</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="alert alert-warning" role="alert">
+                        No payment options are available at the moment.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

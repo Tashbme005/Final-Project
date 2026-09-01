@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Index{% endblock %}
+
+{% load humanize %}
+
+{% block content %}
+    <h1>Welcome to Oyera Service BAy</h1>
+    <p class="important">
+      Your trust car servicing company.
+    </p>
+    <div class="layout">
+    <aside class="sidebar">
+      <h4 class="brand">Oyera Bay Services</h4>
+      <p class="nav-label">Overview</p>
+      <nav class="nav-links">
+        <a href="index.html" class="active">Home</a>
+        <a href="employee_list.html">Employees</a>
+        <a href="service_list.html">Services</a>
+        <a href="customer_list.html">Customers</a>
+        <a href="invetory_list.html">Inventory</a>
+      </nav>
+    </aside>
+    <main class="main">
+      <h5 class="page-title">Dashboard</h5>
+      <div class="cards-grid">
+        <section class="card">
+          <p class="card-label">Registered Technicians</p>
+          <p class="card-value">{{technician_list}}</p>
+        </section>
+        <section class="card">
+          <p class="card-label">Inventory</p>
+          <p class="card-value">{{part_list}}</p>
+        </section>
+        <section class="card">
+          <p class="card-label">Customers</p>
+          <div class="customer-stats">
+            <p class="stat">{{completed}}</p>
+            <p class="stat muted">{{pending}}</p>
+            <p class="stat muted">{{in_progress}}</p>
+          </div>
+        </section>
+        <section class="card">
+          <p class="card-label">Car in service</p>
+          <p class="card-value">{{order.not_complete}}</p>
+        </section>
+      </div>
+      <div class="table-wrapper">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Service</th>
+              <th>Order</th>
+              <th>Description</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{{customer_name}}</td>
+              <td>{{service}}</td>
+              <td>{{order}}</td>
+              <td>{{description}}</td>
+              <td>{{status}}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+    <div class="table-wrapper">
+      table class="table">
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>NIN</th>
+            <th>Passport</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{employee_name}}</td>
+            <td>{{email}}</td>
+            <td>{{phone_number}}</td>
+            <td>{{nin}}</td>
+            <td>{{passport_number}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

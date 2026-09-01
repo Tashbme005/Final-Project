@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+
+{% block title %} Inspection Form {% endblock %}
+
+{% load humanize %}
+
+{% block content %}
+    <form action="{% url 'inspection_form' %}" method="POST">
+    {% csrf_token %}
+    <label>Vehicle Registeration</label>
+    <div class="container mb-3">
+      <div class="row">
+        <div class="col">
+          <label for="findings" class="form-label">Findings</label>
+          <input type="text" name="findings" id="findings" class="form-control" value="{{ form.findings.value|default:'' }}" required>
+        </div>
+      </div>
+      <div class="col">
+        <label for="recommended_service" class="form-label">Recommended Service</label>
+        <input type="text" name="recommended_service" id="recommended_service" class="form-control" value="{{ form.recommended_service.value|default:'' }}" required>
+      </div>
+      <div class="col">
+        <label for="time_of_occurrence" class="form-label">Time of Occurrence</label>
+        <input type="datetime-local" name="time_of_occurrence" id="time_of_occurrence" class="form-control" value="{{ form.time_of_occurrence.value|default:'' }}" required>
+      </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </form>
+{% endblock %}

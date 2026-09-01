@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block title %}Receipt{% endblock %}
+
+{% load humanize %}
+
+{% block content %}
+    <div class="container my-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <div>
+                    <h3 class="mb-0">Payment Receipt</h3>
+                    <small>Invoice #{{ payment.invoice_number|default(payment.id) }}</small>
+                </div>
+                <span class="badge {% if payment.status == 'paid' %}bg-success{% elif payment.status == 'pending' %}bg-warning text-dark{% else %}bg-danger{% endif %} px-3 py-2">
+                    {{ payment.status|title }}
+                </span>
+            </div>
+
+            <div class="card-body p-4">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h5>Customer Details</h5>
+                        <p class="mb-1"><strong>Name:</strong> {{ payment.customer.name }}</p>
+                        <p class="mb-1"><strong>Phone:</strong> {{ payment.customer.phone }}</p>
+                        <p class="mb-1"><strong>Email:</strong> {{ payment.customer.email }}</p>
+                        <p class="mb-0"><strong>Address:</strong> {{ payment.customer.address|default('N/A') }}</p>
+                    </div>
+
+                    <div class="col-md-6 text-md-end">
+                        <h5>Payment Details</h5>
+                        <p class="mb-1"><strong>Method:</strong> {{ payment.method|title }}</p>
+                        <p class="mb-1"><strong>Reference:</strong> {{ payment.reference|default('N/A') }}</p>
+                        <p class="mb-1"><strong>Date:</strong> {{ payment.paid_at|date:'d M Y' if payment.paid_at else payment.created_at|date:'d M Y' }}</p>
+                        <p class="mb-0"><strong>Total Paid:</strong> {{ payment.amount }} {{ payment.currency|upper }}</p>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <h5>Vehicle Details</h5>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Vehicle:</strong> {{ payment.vehicle.make }} {{ payment.vehicle.model }}</p>
+                        <p class="mb-1"><strong>Year:</strong> {{ payment.vehicle.year }}</p>
+                        <p class="mb-1"><strong>Plate Number:</strong> {{ payment.vehicle.plate_number }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Color:</strong> {{ payment.vehicle.color|default('N/A') }}</p>
+                        <p class="mb-1"><strong>VIN:</strong> {{ payment.vehicle.vin|default('N/A') }}</p>
+                        <p class="mb-0"><strong>Service:</strong> {{ payment.service.name|default(payment.service_type|default('Service')) }}</p>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Description</th>
+                                <th>Qty</th>
+                                <th>Unit Price</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in payment.items %}
+                                <tr>
+                                    <td>{{ item.description }}</td>
+                                    <td>{{ item.quantity|default(1) }}</td>
+                                    <td>{{ item.unit_price }}</td>
+                                    <td>{{ item.amount }}</td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">No item details available.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-md-7"></div>
+                    <div class="col-md-5">
+                        <div class="border rounded p-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Subtotal:</span>
+                                <strong>{{ payment.subtotal|default(payment.amount) }} {{ payment.currency|upper }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Tax:</span>
+                                <strong>{{ payment.tax|default(0) }} {{ payment.currency|upper }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between border-top pt-2">
+                                <span>Total:</span>
+                                <strong>{{ payment.amount }} {{ payment.currency|upper }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if payment.notes %}
+                    <div class="mt-4">
+                        <h6>Notes</h6>
+                        <p class="mb-0 text-muted">{{ payment.notes }}</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}

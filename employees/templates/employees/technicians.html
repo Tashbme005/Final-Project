@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Technicians{% endblock %}
+
+{% load humanize %}
+
+{% block content %}
+    <div class="container py-4">
+        <h1 class="mb-4">Technicians</h1>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Phone Number</th>
+                    <th scope="col">NIN</th>
+                    <th scope="col">Passport Number</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for technician in technicians %}
+                <tr>
+                    <td>{{ technician.id }}</td>
+                    <td>{{ technician.name }}</td>
+                    <td>{{ technician.email }}</td>
+                    <td>{{ technician.phone_number }}</td>
+                    <td>{{ technician.nin }}</td>
+                    <td>{{ technician.passport_number }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
